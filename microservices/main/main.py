@@ -1,6 +1,6 @@
 import uvicorn
 from fastapi import FastAPI
-from app.api.endpoints import router as api_router
+from app.api.v1.api import api_router
 
 from fastapi.responses import FileResponse
 import os

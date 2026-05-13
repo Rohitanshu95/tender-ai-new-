@@ -2,6 +2,12 @@ from langchain_core.prompts import ChatPromptTemplate
 from app.core.llm import get_llm
 from app.services.models import TenderData, Requirement
 from src.utils.parser import get_document_text
+from src.prompts.tender_prompts import (
+    EXTRACTION_SYSTEM_MESSAGE,
+    EXTRACTION_HUMAN_MESSAGE,
+    get_template_system_message,
+    TEMPLATE_HUMAN_MESSAGE
+)
 
 def extract_tender_info(rfp_paths: list[str], corr_paths: list[str] = []) -> TenderData:
     """
@@ -21,22 +27,9 @@ def extract_tender_info(rfp_paths: list[str], corr_paths: list[str] = []) -> Ten
     llm = get_llm()
     structured_llm = llm.with_structured_output(TenderData)
 
-    system_message = (
-        "You are a Senior Procurement Analyst. You are provided with a Main RFP and a SEQUENCE of Corrigenda (updates). "
-        "Your goal is to extract the ABSOLUTE LATEST tender details. "
-        "IMPORTANT: There may be multiple corrigenda provided in the 'CORRIGENDUM UPDATES' section. "
-        "Corrigendum 2 might update a date already changed by Corrigendum 1. "
-        "You must track the timeline of these updates and ensure the final values reflect the most recent information provided across ALL documents. "
-        "Always favor information in 'CORRIGENDUM UPDATES' sections over the 'MAIN RFP' section."
-    )
-
     prompt = ChatPromptTemplate.from_messages([
-        ("system", system_message),
-        ("human", (
-            "--- MAIN RFP TEXT ---\n{rfp_part}\n\n"
-            "--- CORRIGENDUM UPDATES ---\n{corr_part}\n\n"
-            "Identify all updates and provide the final extracted tender details."
-        ))
+        ("system", EXTRACTION_SYSTEM_MESSAGE),
+        ("human", EXTRACTION_HUMAN_MESSAGE)
     ])
 
     max_total_chars = 80000
@@ -67,20 +60,9 @@ def generate_template(rfp_paths: list[str], template_type: str) -> list[Requirem
     RequirementList = create_model("RequirementList", requirements=(list[Requirement], ...))
     structured_llm = llm.with_structured_output(RequirementList)
 
-    prompts = {
-        "pq": "You are a Pre-Qualification (PQ) Agent. Extract all eligibility criteria like financial turnover, project experience, certifications, and legal compliance.",
-        "tq": "You are a Technical Qualification (TQ) Agent. Extract all technical specs, scope of work, methodology, and technical team requirements.",
-        "other": "You are a Documentation Agent. Extract all required attachments, annexures, bid security (EMD), and specific forms mentioned."
-    }
-
-    system_message = (
-        f"{prompts.get(template_type, '')} "
-        "Provide a clean list of specific requirements. Be concise but thorough."
-    )
-
     prompt = ChatPromptTemplate.from_messages([
-        ("system", system_message),
-        ("human", "Extract requirements from the following RFP text:\n\n{text}")
+        ("system", get_template_system_message(template_type)),
+        ("human", TEMPLATE_HUMAN_MESSAGE)
     ])
 
     max_chars = 80000
