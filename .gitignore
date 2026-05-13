@@ -1,0 +1,6 @@
+.venv
+temp_uploads/
+db/
+node_modules
+dist
+.env

@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Tender Evaluation System</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+
+        :root {
+            --bg: #09090b;
+            --sidebar: #111114;
+            --accent: #3b82f6;
+            --border: rgba(255, 255, 255, 0.08);
+            --card: rgba(255, 255, 255, 0.03);
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); height: 100vh; display: flex; overflow: hidden; }
+
+        /* Navigation */
+        .sidebar { width: 280px; background: var(--sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 2rem 1.5rem; }
+        .nav-item { padding: 1rem; border-radius: 12px; cursor: pointer; display: flex; align-items: center; gap: 12px; color: var(--text-muted); transition: all 0.3s; margin-bottom: 0.5rem; }
+        .nav-item:hover { background: rgba(255,255,255,0.05); color: var(--text); }
+        .nav-item.active { background: var(--accent); color: white; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3); }
+        .nav-item svg { width: 20px; height: 20px; }
+
+        /* Main Area */
+        .main { flex: 1; overflow-y: auto; padding: 3rem; }
+        .view { display: none; }
+        .view.active { display: block; }
+
+        /* Tables */
+        .table-container { background: var(--card); border: 1px solid var(--border); border-radius: 20px; overflow: hidden; margin-top: 2rem; }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th { background: rgba(255,255,255,0.02); padding: 1rem; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); border-bottom: 1px solid var(--border); }
+        td { padding: 1.25rem 1rem; font-size: 0.85rem; border-bottom: 1px solid var(--border); }
+        tr:hover { background: rgba(255,255,255,0.01); }
+
+        /* Forms */
+        .form-group { margin-bottom: 1.5rem; }
+        label { display: block; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.5rem; }
+        input, select, textarea { width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 10px; padding: 0.75rem 1rem; color: white; font-family: inherit; }
+        input:focus { outline: none; border-color: var(--accent); }
+
+        /* Buttons */
+        .btn { padding: 0.75rem 1.5rem; border-radius: 10px; font-weight: 700; cursor: pointer; border: none; transition: all 0.3s; display: inline-flex; align-items: center; gap: 8px; }
+        .btn-primary { background: var(--accent); color: white; }
+        .btn-secondary { background: rgba(255,255,255,0.1); color: white; }
+        .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+
+        /* Modals */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 100; backdrop-filter: blur(4px); }
+        .modal { background: var(--sidebar); border: 1px solid var(--border); border-radius: 24px; padding: 2.5rem; width: 600px; max-width: 90%; }
+
+        /* Wizard */
+        .wizard-step { display: none; }
+        .wizard-step.active { display: block; }
+
+        /* Extraction Overlay */
+        #extraction-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(9, 9, 11, 0.95);
+            z-index: 1000;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .ai-pulse {
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            box-shadow: 0 0 50px rgba(59, 130, 246, 0.4);
+            margin-bottom: 2.5rem;
+        }
+
+        .ai-pulse::after {
+            content: '';
+            position: absolute;
+            inset: -10px;
+            border: 2px solid #3b82f6;
+            border-radius: 50%;
+            animation: pulse-ring 1.5s ease-out infinite;
+            opacity: 0;
+        }
+
+        @keyframes pulse-ring {
+            0% { transform: scale(1); opacity: 0.5; }
+            100% { transform: scale(1.5); opacity: 0; }
+        }
+
+        .status-text {
+            font-size: 1.2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #fff 0%, #94a3b8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div id="extraction-overlay">
+        <div class="ai-pulse">
+            <svg viewBox="0 0 24 24" width="40" height="40" stroke="white" stroke-width="2" fill="none"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+        </div>
+        <p class="status-text" id="status-msg">AI Engine Warming Up...</p>
+        <p style="color: var(--text-muted); font-size: 0.85rem;">Processing RFP & Multi-Corrigenda</p>
+    </div>
+    <aside class="sidebar">
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 3rem;">
+            <div style="width: 32px; height: 32px; background: var(--accent); border-radius: 8px;"></div>
+            <h1 style="font-size: 1.2rem; font-weight: 800;">Tender<span>AI</span></h1>
+        </div>
+        <div class="nav-item active" onclick="showView('dashboard')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+            Dashboard
+        </div>
+        <div class="nav-item" onclick="showView('tender-list')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+            Tender List
+        </div>
+        <div class="btn btn-primary" style="margin-top: 2rem;" onclick="showView('add-tender')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            Add Tender
+        </div>
+    </aside>
+
+    <main class="main">
+        <!-- Dashboard View -->
+        <div id="dashboard" class="view active">
+            <h2 style="font-size: 2rem; font-weight: 800;">System Overview</h2>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; margin-top: 2rem;">
+                <div style="background: var(--card); padding: 2rem; border-radius: 20px; border: 1px solid var(--border);">
+                    <p style="color: var(--text-muted); font-size: 0.8rem; font-weight: 700; text-transform: uppercase;">Total Tenders</p>
+                    <p id="stat-total" style="font-size: 2.5rem; font-weight: 800; margin-top: 0.5rem;">0</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tender List View -->
+        <div id="tender-list" class="view">
+            <div class="header-flex">
+                <h2 style="font-size: 2rem; font-weight: 800;">Tender List</h2>
+            </div>
+            <div class="table-container">
+                <table id="tenderTable">
+                    <thead>
+                        <tr>
+                            <th>Sn</th>
+                            <th>Ref No. / ID</th>
+                            <th>Title</th>
+                            <th>Organization</th>
+                            <th>Dates</th>
+                            <th>Docs</th>
+                            <th>Corrigendum</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Add Tender View (Wizard) -->
+        <div id="add-tender" class="view">
+            <h2 style="font-size: 2rem; font-weight: 800; margin-bottom: 2rem;">Add New Tender</h2>
+            
+            <div id="step-1" class="wizard-step active">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                    <!-- RFP Upload -->
+                    <div style="background: var(--card); padding: 3rem; border-radius: 24px; border: 2px dashed var(--border); text-align: center;">
+                        <input type="file" id="rfpFiles" multiple style="display: none;">
+                        <div onclick="document.getElementById('rfpFiles').click()" style="cursor: pointer;">
+                            <svg viewBox="0 0 24 24" style="width: 48px; height: 48px; color: var(--accent); margin-bottom: 1rem;" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                            <p style="font-size: 1rem; font-weight: 600;">1. Upload RFP Documents</p>
+                            <p style="color: var(--text-muted); font-size: 0.75rem; margin-top: 4px;">Main RFP/RFQ/EoI files</p>
+                        </div>
+                        <div id="rfpList" style="margin-top: 1rem; font-size: 0.7rem; color: var(--accent);"></div>
+                    </div>
+
+                    <!-- Corrigendum Upload -->
+                    <div style="background: var(--card); padding: 3rem; border-radius: 24px; border: 2px dashed rgba(139, 92, 246, 0.3); text-align: center;">
+                        <input type="file" id="corrigendumFiles" multiple style="display: none;">
+                        <div onclick="document.getElementById('corrigendumFiles').click()" style="cursor: pointer;">
+                            <svg viewBox="0 0 24 24" style="width: 48px; height: 48px; color: #a78bfa; margin-bottom: 1rem;" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                            <p style="font-size: 1rem; font-weight: 600;">2. Upload Corrigendum</p>
+                            <p style="color: var(--text-muted); font-size: 0.75rem; margin-top: 4px;">Optional: Updates to the RFP</p>
+                        </div>
+                        <div id="corrigendumList" style="margin-top: 1rem; font-size: 0.7rem; color: #a78bfa;"></div>
+                    </div>
+                </div>
+                
+                <div id="extraction-progress" style="display: none; width: 450px; margin: 3rem auto 1rem auto;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.75rem; color: var(--accent);">
+                        <span id="progress-status">AI Analyzing Documents...</span>
+                        <span id="progress-percent">30%</span>
+                    </div>
+                    <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.05); border-radius: 100px; overflow: hidden; border: 1px solid var(--border); margin-bottom: 1.5rem;">
+                        <div id="progress-bar" style="width: 30%; height: 100%; background: linear-gradient(90deg, #3b82f6, #8b5cf6); border-radius: 100px; transition: all 0.5s; box-shadow: 0 0 15px rgba(59, 130, 246, 0.5); animation: progress-glow 2s infinite linear;"></div>
+                    </div>
+                    
+                    <div id="task-log" style="background: rgba(0,0,0,0.2); border-radius: 12px; padding: 1.2rem; font-family: monospace; font-size: 0.75rem; border: 1px solid var(--border); max-height: 180px; overflow-y: auto;">
+                        <div class="task-item" id="t-read">Reading document content...</div>
+                        <div class="task-item" id="t-id" style="color: var(--text-muted);">Extracting Tender ID & Title...</div>
+                        <div class="task-item" id="t-org" style="color: var(--text-muted);">Identifying Organization...</div>
+                        <div class="task-item" id="t-date" style="color: var(--text-muted);">Reconciling Multi-Corrigenda Dates...</div>
+                        <div class="task-item" id="t-agent" style="color: var(--text-muted);">Checking Agentic Requirements...</div>
+                    </div>
+                </div>
+
+                <style>
+                    .task-item { margin-bottom: 8px; display: flex; align-items: center; gap: 10px; transition: all 0.3s; }
+                    .task-item.done { color: #10b981 !important; }
+                    .task-item.done::before { content: '✔'; font-weight: bold; }
+                    .task-item.active { color: var(--accent); }
+                    .task-item.active::before { content: '●'; animation: blink 1s infinite; }
+                    @keyframes blink { 0% { opacity: 0; } 50% { opacity: 1; } 100% { opacity: 0; } }
+                </style>
+
+                <div style="text-align: center; margin-top: 1rem;">
+                    <button id="extractBtn" class="btn btn-primary" style="padding: 1rem 3rem;" onclick="processUnifiedExtraction()">Evaluate Unified Tender</button>
+                    <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 1rem;">The AI will extract details from both and show updated values.</p>
+                </div>
+            </div>
+
+            <style>
+                @keyframes progress-glow {
+                    0% { filter: brightness(1); }
+                    50% { filter: brightness(1.5); }
+                    100% { filter: brightness(1); }
+                }
+            </style>
+
+            <!-- Step 2: Moderation Form -->
+            <div id="step-2" class="wizard-step">
+                <div style="background: var(--card); padding: 2.5rem; border-radius: 24px; border: 1px solid var(--border);">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                        <div class="form-group"><label>Tender ID / Ref No</label><input id="f_id"></div>
+                        <div class="form-group"><label>Tender Type</label><input id="f_type"></div>
+                        <div class="form-group"><label>Evaluation Type</label><input id="f_eval"></div>
+                        <div class="form-group"><label>Organization</label><input id="f_org"></div>
+                        <div class="form-group" style="grid-column: span 2;"><label>Title</label><input id="f_title"></div>
+                        <div class="form-group"><label>Date of Publish</label><input id="f_publish"></div>
+                        <div class="form-group"><label>Date of Closing</label><input id="f_closing"></div>
+                        <div class="form-group"><label>Date of Bid Opening</label><input id="f_opening"></div>
+                        <div class="form-group"><label>Main Document</label><input id="f_doc"></div>
+                        <div class="form-group"><label>BOQ Reference</label><input id="f_boq"></div>
+                    </div>
+                    <!-- Compliance Templates Section -->
+                    <div style="margin-top: 3rem; border-top: 1px solid var(--border); padding-top: 2rem;">
+                        <h3 style="margin-bottom: 1.5rem; font-size: 1.2rem; font-weight: 700;">Agentic Compliance Templates</h3>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 2rem;">
+                            <button class="btn btn-secondary" onclick="generateAgentTemplate('pq')" style="justify-content: center; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.2);">
+                                <svg viewBox="0 0 24 24" width="18" height="18" stroke="#3b82f6" fill="none"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                                Generate PQ
+                            </button>
+                            <button class="btn btn-secondary" onclick="generateAgentTemplate('tq')" style="justify-content: center; background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.2);">
+                                <svg viewBox="0 0 24 24" width="18" height="18" stroke="#8b5cf6" fill="none"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+                                Generate TQ
+                            </button>
+                            <button class="btn btn-secondary" onclick="generateAgentTemplate('other')" style="justify-content: center; background: rgba(234, 179, 8, 0.1); border: 1px solid rgba(234, 179, 8, 0.2);">
+                                <svg viewBox="0 0 24 24" width="18" height="18" stroke="#eab308" fill="none"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                                Generate Others
+                            </button>
+                        </div>
+
+                    <!-- Template Results -->
+                    <div id="template-results" style="display: none; background: rgba(255,255,255,0.02); border-radius: 16px; padding: 1.5rem; border: 1px solid var(--border);">
+                        <h4 id="template-title" style="margin-bottom: 1rem; font-size: 0.9rem; color: var(--accent);">PQ Requirements</h4>
+                        <div id="template-list" style="display: flex; flex-direction: column; gap: 12px;"></div>
+                    </div>
+                    
+                    <div style="margin-top: 2rem; display: flex; gap: 1rem;">
+                        <button class="btn btn-primary" onclick="saveTender()">Save Tender Details</button>
+                        <button class="btn btn-secondary" onclick="showView('add-tender', 1)">Back</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- View Tender Page -->
+        <div id="view-tender" class="view">
+            <div class="header-flex">
+                <h2 id="v_title" style="font-size: 2rem; font-weight: 800;">Tender Details</h2>
+                <button class="btn btn-secondary" onclick="showView('tender-list')">Back to List</button>
+            </div>
+            <div id="v_content" style="background: var(--card); padding: 3rem; border-radius: 24px; border: 1px solid var(--border);"></div>
+        </div>
+    </main>
+
+    <!-- Corrigendum Modal -->
+    <div id="corrigendum-modal" class="modal-overlay">
+        <div class="modal">
+            <h3 style="margin-bottom: 2rem;">Add Corrigendum</h3>
+            <div id="corr-step-1">
+                <input type="file" id="corrFile" style="margin-bottom: 2rem;">
+                <button class="btn btn-primary" onclick="uploadCorrigendum()">Upload & Proceed</button>
+                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let tenders = [];
+        let currentTenderId = null;
+
+        async function init() {
+            await loadTenders();
+            showView('dashboard');
+        }
+
+        async function loadTenders() {
+            const resp = await fetch('/api/v1/tenders');
+            tenders = await resp.json();
+            renderTenderTable();
+            document.getElementById('stat-total').textContent = tenders.length;
+        }
+
+        function showView(viewId, step = 1) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.getElementById(viewId).classList.add('active');
+            
+            document.querySelectorAll('.nav-item').forEach(i => {
+                i.classList.toggle('active', i.textContent.toLowerCase().includes(viewId.replace('-',' ')));
+            });
+
+            if (viewId === 'add-tender') {
+                document.querySelectorAll('.wizard-step').forEach(s => s.classList.remove('active'));
+                document.getElementById(`step-${step}`).classList.add('active');
+            }
+        }
+
+        function renderTenderTable() {
+            const tbody = document.querySelector('#tenderTable tbody');
+            tbody.innerHTML = tenders.map((t, index) => `
+                <tr>
+                    <td>${index + 1}</td>
+                    <td><span style="color: var(--accent); font-weight: 700;">${t.tender_id}</span></td>
+                    <td>${t.title}</td>
+                    <td>${t.organization}</td>
+                    <td>
+                        <div style="font-size: 0.7rem; color: var(--text-muted);">P: ${t.date_of_publish}</div>
+                        <div style="font-size: 0.7rem; color: var(--text-muted);">C: ${t.date_of_closing}</div>
+                    </td>
+                    <td>
+                        <div style="font-size: 0.7rem;">${t.tender_document_ref}</div>
+                        <div style="font-size: 0.7rem;">${t.boq_ref}</div>
+                    </td>
+                    <td>${t.corrigenda.length} Entries</td>
+                    <td>
+                        <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 0.7rem;" onclick="viewTender(${t.id})">View</button>
+                        <button class="btn btn-primary" style="padding: 4px 8px; font-size: 0.7rem;" onclick="openCorrigendumModal(${t.id})">+ Corr</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        document.getElementById('rfpFiles').addEventListener('change', (e) => {
+            const list = document.getElementById('rfpList');
+            list.innerHTML = Array.from(e.target.files).map(f => `<div>${f.name}</div>`).join('');
+        });
+
+        document.getElementById('corrigendumFiles').addEventListener('change', (e) => {
+            const list = document.getElementById('corrigendumList');
+            list.innerHTML = Array.from(e.target.files).map(f => `<div>${f.name}</div>`).join('');
+        });
+
+        async function processUnifiedExtraction() {
+            const rfpFiles = document.getElementById('rfpFiles').files;
+            const corrFiles = document.getElementById('corrigendumFiles').files;
+            
+            if (rfpFiles.length === 0) return alert("Please upload at least the RFP document.");
+
+            const progressContainer = document.getElementById('extraction-progress');
+            const progressBar = document.getElementById('progress-bar');
+            const progressPercent = document.getElementById('progress-percent');
+            const extractBtn = document.getElementById('extractBtn');
+            
+            // Reset Task Log
+            document.querySelectorAll('.task-item').forEach(el => {
+                el.classList.remove('done', 'active');
+                if (el.id !== 't-read') el.style.color = 'var(--text-muted)';
+            });
+
+            progressContainer.style.display = 'block';
+            extractBtn.disabled = true;
+            extractBtn.textContent = "Processing...";
+
+            const setTask = (id, status) => {
+                const el = document.getElementById(id);
+                if (status === 'active') {
+                    el.classList.add('active');
+                    el.style.color = 'var(--accent)';
+                } else if (status === 'done') {
+                    el.classList.remove('active');
+                    el.classList.add('done');
+                    el.style.color = '#10b981';
+                }
+            };
+
+            setTask('t-read', 'active');
+            let progress = 10;
+            progressBar.style.width = `10%`;
+            progressPercent.textContent = `10%`;
+
+            const formData = new FormData();
+            Array.from(rfpFiles).forEach(f => formData.append('rfp_files', f));
+            Array.from(corrFiles).forEach(f => formData.append('corrigendum_files', f));
+
+            try {
+                // Simulate step-by-step buffer
+                const updateUI = (p, current, prev) => {
+                    progress = p;
+                    progressBar.style.width = `${p}%`;
+                    progressPercent.textContent = `${p}%`;
+                    if (prev) setTask(prev, 'done');
+                    if (current) setTask(current, 'active');
+                };
+
+                setTimeout(() => updateUI(25, 't-id', 't-read'), 1500);
+                setTimeout(() => updateUI(50, 't-org', 't-id'), 3500);
+                setTimeout(() => updateUI(75, 't-date', 't-org'), 5500);
+                setTimeout(() => updateUI(90, 't-agent', 't-date'), 7500);
+
+                const resp = await fetch('/api/v1/extract', { method: 'POST', body: formData });
+                const result = await resp.json();
+                const data = result.data;
+
+                updateUI(100, null, 't-agent');
+                
+                // ... fill fields ...
+
+                // ... fill fields ...
+                document.getElementById('f_id').value = data.tender_id || '';
+                document.getElementById('f_type').value = data.tender_type || '';
+                document.getElementById('f_eval').value = data.evaluation_type || '';
+                document.getElementById('f_org').value = data.organization || '';
+                document.getElementById('f_title').value = data.title || '';
+                document.getElementById('f_publish').value = data.date_of_publish || '';
+                document.getElementById('f_closing').value = data.date_of_closing || '';
+                document.getElementById('f_opening').value = data.date_of_bid_opening || '';
+                document.getElementById('f_doc').value = data.tender_document_ref || '';
+                document.getElementById('f_boq').value = data.boq_ref || '';
+
+                showView('add-tender', 2);
+            } catch (error) {
+                alert("Error during extraction. Please check connection.");
+            } finally {
+                progressContainer.style.display = 'none';
+                extractBtn.disabled = false;
+                extractBtn.textContent = "Evaluate Unified Tender";
+            }
+        }
+
+        async function generateAgentTemplate(type) {
+            const rfpFiles = document.getElementById('rfpFiles').files;
+            if (rfpFiles.length === 0) return alert("RFP files are required for template generation.");
+
+            const progressContainer = document.getElementById('extraction-progress');
+            const progressStatus = document.getElementById('progress-status');
+            const resultsBox = document.getElementById('template-results');
+            const listContainer = document.getElementById('template-list');
+            const title = document.getElementById('template-title');
+
+            progressContainer.style.display = 'block';
+            progressStatus.textContent = `Agentic ${type.toUpperCase()} Extraction in Progress...`;
+            
+            const formData = new FormData();
+            Array.from(rfpFiles).forEach(f => formData.append('rfp_files', f));
+
+            try {
+                const resp = await fetch(`/api/v1/generate-template?template_type=${type}`, {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await resp.json();
+                
+                title.textContent = `${type.toUpperCase()} Compliance Requirements`;
+                listContainer.innerHTML = data.requirements.map(r => `
+                    <div style="padding: 1rem; background: rgba(255,255,255,0.03); border-radius: 8px; border-left: 3px solid var(--accent);">
+                        <div style="font-weight: 700; font-size: 0.85rem; color: var(--accent); margin-bottom: 4px;">${r.category}</div>
+                        <div style="font-weight: 600; font-size: 0.95rem;">${r.requirement}</div>
+                        <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;">${r.description || ''}</div>
+                    </div>
+                `).join('');
+                
+                resultsBox.style.display = 'block';
+                resultsBox.scrollIntoView({ behavior: 'smooth' });
+            } catch (error) {
+                alert("Error generating template.");
+            } finally {
+                progressContainer.style.display = 'none';
+            }
+        }
+
+        async function saveTender() {
+            const data = {
+                tender_id: document.getElementById('f_id').value,
+                tender_type: document.getElementById('f_type').value,
+                evaluation_type: document.getElementById('f_eval').value,
+                organization: document.getElementById('f_org').value,
+                title: document.getElementById('f_title').value,
+                date_of_publish: document.getElementById('f_publish').value,
+                date_of_closing: document.getElementById('f_closing').value,
+                date_of_bid_opening: document.getElementById('f_opening').value,
+                tender_document_ref: document.getElementById('f_doc').value,
+                boq_ref: document.getElementById('f_boq').value,
+                corrigenda: []
+            };
+
+            await fetch('/api/v1/tenders', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            await loadTenders();
+            showView('tender-list');
+        }
+
+        function viewTender(id) {
+            const tender = tenders.find(t => t.id === id);
+            document.getElementById('v_title').textContent = tender.title;
+            document.getElementById('v_content').innerHTML = `
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                    <div><label>Tender ID</label><p>${tender.tender_id}</p></div>
+                    <div><label>Organization</label><p>${tender.organization}</p></div>
+                    <div><label>Closing Date</label><p>${tender.date_of_closing}</p></div>
+                    <div><label>Bid Opening</label><p>${tender.date_of_bid_opening}</p></div>
+                </div>
+                <h3 style="margin-top: 3rem; margin-bottom: 1rem;">Corrigenda</h3>
+                ${tender.corrigenda.length === 0 ? '<p>No corrigendum added.</p>' : tender.corrigenda.map(c => `
+                    <div style="background: rgba(255,255,255,0.02); padding: 1rem; border-radius: 12px; margin-bottom: 1rem;">
+                        <p>Date: ${c.date}</p>
+                        <p>Docs: ${c.documents.join(', ')}</p>
+                    </div>
+                `).join('')}
+            `;
+            showView('view-tender');
+        }
+
+        function openCorrigendumModal(id) {
+            currentTenderId = id;
+            document.getElementById('corrigendum-modal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('corrigendum-modal').style.display = 'none';
+        }
+
+        async function uploadCorrigendum() {
+            const file = document.getElementById('corrFile').files[0];
+            const formData = new FormData();
+            formData.append('files', file);
+
+            await fetch(`/api/v1/tenders/${currentTenderId}/corrigendum`, {
+                method: 'POST',
+                body: formData
+            });
+
+            closeModal();
+            await loadTenders();
+        }
+
+        init();
+    </script>
+</body>
+</html>
