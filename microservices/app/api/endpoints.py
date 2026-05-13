@@ -1,4 +1,4 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi import APIRouter, UploadFile, File, HTTPException, Form
 from typing import List, Optional
 import os
 import shutil
@@ -29,30 +29,39 @@ async def create_tender(data: TenderData):
 
 @router.post("/extract", response_model=ExtractionResponse)
 async def upload_and_extract(
+    doc_type: str = Form(...),
     rfp_files: List[UploadFile] = File(...),
     corrigendum_files: List[UploadFile] = File([])
 ):
     """
-    Receives RFP and Corrigendum files separately for better AI analysis.
+    Receives RFP/RFQ/EOI and Corrigendum files separately and routes them to subdirectories.
     """
     rfp_paths = []
     corr_paths = []
     
     try:
-        # Process RFP Files
+        # Determine target directory for main files
+        if doc_type == "rfq":
+            target_dir = settings.RFQ_DIR
+        elif doc_type == "eoi":
+            target_dir = settings.EOI_DIR
+        else:
+            target_dir = settings.RFP_DIR
+
+        # Process Main Files (RFP/RFQ/EOI)
         for file in rfp_files:
-            path = os.path.join(settings.UPLOAD_DIR, f"rfp_{file.filename}")
+            path = os.path.join(target_dir, file.filename)
             with open(path, "wb") as buffer:
                 shutil.copyfileobj(file.file, buffer)
             rfp_paths.append(path)
             
             # Index
             text = get_document_text(path)
-            vector_db.add_document(text, {"type": "rfp", "filename": file.filename})
+            vector_db.add_document(text, {"type": doc_type, "filename": file.filename})
 
         # Process Corrigendum Files
         for file in corrigendum_files:
-            path = os.path.join(settings.UPLOAD_DIR, f"corr_{file.filename}")
+            path = os.path.join(settings.CORRIGENDUM_DIR, file.filename)
             with open(path, "wb") as buffer:
                 shutil.copyfileobj(file.file, buffer)
             corr_paths.append(path)
@@ -88,5 +97,38 @@ async def generate_tender_template(
         from app.services.extraction import generate_template
         requirements = generate_template(rfp_paths, template_type)
         return {"requirements": requirements}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/tenders/{id}/corrigendum")
+async def upload_tender_corrigendum(
+    id: int,
+    files: List[UploadFile] = File(...)
+):
+    """
+    Uploads corrigendum documents for an existing tender.
+    """
+    try:
+        filenames = []
+        for file in files:
+            path = os.path.join(settings.CORRIGENDUM_DIR, file.filename)
+            with open(path, "wb") as buffer:
+                shutil.copyfileobj(file.file, buffer)
+            filenames.append(file.filename)
+            
+            # Index
+            text = get_document_text(path)
+            vector_db.add_document(text, {"type": "corrigendum", "tender_id": id, "filename": file.filename})
+
+        # Record in DB
+        from datetime import datetime
+        entry = CorrigendumEntry(
+            date=datetime.now().strftime("%Y-%m-%d"),
+            documents=filenames,
+            details="Manually added corrigendum"
+        )
+        add_corrigendum(id, entry)
+        
+        return {"message": "Corrigendum uploaded successfully", "files": filenames}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
