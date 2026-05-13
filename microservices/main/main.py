@@ -5,7 +5,18 @@ from app.api.v1.api import api_router
 from fastapi.responses import FileResponse
 import os
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI(title="Procurement Extraction AI System")
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], # In production, replace with specific origins
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Include API routes
 app.include_router(api_router, prefix="/api/v1")

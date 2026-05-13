@@ -70,17 +70,37 @@ async def upload_and_extract(
 @router.post("/generate-template")
 async def generate_tender_template(
     template_type: str, # pq, tq, other
-    rfp_files: List[UploadFile] = File(...)
+    doc_type: str = Form("rfp"),
+    rfp_files: List[UploadFile] = File(...),
+    corrigendum_files: List[UploadFile] = File([])
 ):
     rfp_paths = []
+    corr_paths = []
     try:
+        # Determine target directory for main files
+        if doc_type == "rfq":
+            target_dir = settings.RFQ_DIR
+        elif doc_type == "eoi":
+            target_dir = settings.EOI_DIR
+        else:
+            target_dir = settings.RFP_DIR
+
+        # Save Main files to target_dir
         for file in rfp_files:
-            path = os.path.join(settings.UPLOAD_DIR, f"tmp_{file.filename}")
+            path = os.path.join(target_dir, file.filename)
             with open(path, "wb") as buffer:
                 shutil.copyfileobj(file.file, buffer)
             rfp_paths.append(path)
         
-        requirements = generate_template(rfp_paths, template_type)
+        # Save Corrigendum files to CORRIGENDUM_DIR
+        for file in corrigendum_files:
+            path = os.path.join(settings.CORRIGENDUM_DIR, file.filename)
+            with open(path, "wb") as buffer:
+                shutil.copyfileobj(file.file, buffer)
+            corr_paths.append(path)
+        
+        all_paths = rfp_paths + corr_paths
+        requirements = generate_template(all_paths, template_type)
         return {"requirements": requirements}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

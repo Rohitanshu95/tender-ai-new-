@@ -69,5 +69,8 @@ def generate_template(rfp_paths: list[str], template_type: str) -> list[Requirem
     truncated_text = combined_text[:max_chars]
 
     chain = prompt | structured_llm
-    result = chain.invoke({"text": truncated_text})
+    result = chain.invoke({
+        "text": truncated_text,
+        "template_type": template_type.upper()
+    })
     return result.requirements
