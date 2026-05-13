@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 const GenerationSection = ({ type, data, isGenerating, onGenerate, error }) => {
   const getAgentConfig = () => {
     switch (type) {
-      case 'general': return { title: "General Intelligence", icon: Info, color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-100' };
+      case 'general': return { title: "General Intelligence", icon: Info, color: 'text-indigo-600', bg: 'bg-indigo-50', border: 'border-indigo-100' };
       case 'pq': return { title: "Eligibility Audit", icon: Shield, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100' };
       case 'tq': return { title: "Technical Evaluation", icon: Target, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-100' };
       default: return { title: "Compliance Review", icon: ClipboardList, color: 'text-slate-600', bg: 'bg-slate-50', border: 'border-slate-100' };
@@ -133,6 +133,41 @@ const GenerationSection = ({ type, data, isGenerating, onGenerate, error }) => {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            ) : type === 'general' ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {data.map((field, idx) => (
+                  <motion.div 
+                    key={idx} 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.1 }}
+                    className={`space-y-2 ${field.requirement.length > 50 ? 'md:col-span-2' : ''}`}
+                  >
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">{field.category}</label>
+                    <div className="group relative bg-white border border-slate-200 rounded-3xl p-6 hover:border-emerald-300 transition-all shadow-sm shadow-slate-100/50">
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex-1">
+                          <textarea 
+                            defaultValue={field.requirement} 
+                            className="w-full bg-transparent border-none p-0 text-sm font-bold text-slate-900 focus:ring-0 resize-none min-h-[40px] custom-scrollbar"
+                            rows={field.requirement.length > 50 ? 3 : 1}
+                          />
+                        </div>
+                        <Target size={14} className="text-slate-200 group-hover:text-emerald-500 transition-colors" />
+                      </div>
+                      <div className="flex items-center justify-between pt-4 mt-4 border-t border-slate-50">
+                        <div className="flex items-center space-x-2">
+                          <Info size={12} className="text-slate-300" />
+                          <span className="text-[10px] text-slate-400 font-medium italic">{field.description}</span>
+                        </div>
+                        <span className="px-2 py-0.5 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-md text-[9px] font-black uppercase tracking-tight">
+                          Auto-Extracted
+                        </span>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
               </div>
             ) : (
               <div className="grid grid-cols-1 gap-4">

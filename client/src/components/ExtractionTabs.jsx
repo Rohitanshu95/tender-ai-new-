@@ -3,7 +3,7 @@ import { ShieldCheck, Cpu, FileText, CheckCircle2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const tabs = [
-  { id: 'general', label: 'General Info', icon: FileText, color: 'text-purple-600', bg: 'bg-purple-50' },
+  { id: 'general', label: 'General Info', icon: FileText, color: 'text-indigo-600', bg: 'bg-indigo-50' },
   { id: 'pq', label: 'Pre-Qualification', icon: ShieldCheck, color: 'text-emerald-600', bg: 'bg-emerald-50' },
   { id: 'tq', label: 'Technical Qualification', icon: Cpu, color: 'text-blue-600', bg: 'bg-blue-50' },
   { id: 'other', label: 'Compliance & Others', icon: FileText, color: 'text-slate-600', bg: 'bg-slate-100' },
