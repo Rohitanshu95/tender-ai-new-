@@ -15,13 +15,17 @@ EXTRACTION_HUMAN_MESSAGE = (
 
 TEMPLATE_PROMPTS = {
     "pq": (
-        "You are the 'Pre-Qualification (PQ) Gatekeeper'. Your specialty is identifying critical eligibility criteria. "
-        "Analyze the document for: \n"
-        "1. Financial Standing (Turnover, Net Worth, Credit Lines).\n"
-        "2. Minimum Experience (Years in business, similar projects completed).\n"
-        "3. Legal Compliance (GST, PAN, Incorporation, Debarment status).\n"
-        "4. Certifications (ISO, etc.).\n"
-        "Be rigorous. If a requirement is mandatory, clearly mark it. Your goal is to ensure only qualified bidders pass."
+        "You are the 'Pre-Qualification (PQ) Gatekeeper'. Your specialty is identifying critical eligibility criteria and the documents needed to prove them. "
+        "Analyze the document for every single requirement related to: \n"
+        "1. Financial Standing (Turnover, Net Worth, Audit Reports).\n"
+        "2. Minimum Experience (Completion certificates, Work orders).\n"
+        "3. Legal Compliance (GST, PAN, ITR, Incorporation, Non-blacklisting affidavits).\n"
+        "4. Technical Capability (Certifications, Personnel, Equipment).\n"
+        "FOR EACH REQUIREMENT, identify: \n"
+        "- Basic Requirement (The high-level category like 'Financial Status')\n"
+        "- Specific Requirement (The exact threshold or rule, e.g., 'Average Turnover > 10 Cr')\n"
+        "- Documents Required (The specific evidence requested, e.g., 'Audited Balance Sheet for last 3 years')\n"
+        "Extract EVERYTHING. Do not summarize multiple requirements into one."
     ),
     "tq": (
         "You are the 'Technical Solutions Expert'. Your specialty is the core Scope of Work and Technical Merit. "
@@ -45,12 +49,25 @@ TEMPLATE_PROMPTS = {
 
 def get_template_system_message(template_type: str) -> str:
     base_msg = TEMPLATE_PROMPTS.get(template_type, TEMPLATE_PROMPTS["other"])
-    return (
-        f"{base_msg}\n\n"
-        "OUTPUT RULES:\n"
+    
+    output_rules = (
         "- Provide a structured list of requirements.\n"
         "- For each requirement, provide a clear 'Condition' and 'Weightage' (if mentioned).\n"
         "- Be thorough and do not miss subtle requirements buried in long paragraphs."
     )
+    
+    if template_type == "pq":
+        output_rules = (
+            "- Provide your response as a JSON list of objects.\n"
+            "- Each object MUST have these keys: 'category', 'requirement', 'description', 'mandatory'.\n"
+            "- Map your findings as follows:\n"
+            "  * 'category' = Basic Requirement\n"
+            "  * 'requirement' = Specific Requirement\n"
+            "  * 'description' = Documents Required\n"
+            "  * 'mandatory' = boolean (always true for PQ unless explicitly optional)\n"
+            "- Ensure EVERY document requested in the RFP is listed in the 'description' field."
+        )
+
+    return f"{base_msg}\n\nOUTPUT RULES:\n{output_rules}"
 
 TEMPLATE_HUMAN_MESSAGE = "Identify and extract all specific requirements for the {template_type} section from the following text:\n\n{text}"

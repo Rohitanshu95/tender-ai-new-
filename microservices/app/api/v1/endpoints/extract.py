@@ -69,7 +69,7 @@ async def upload_and_extract(
 
 @router.post("/generate-template")
 async def generate_tender_template(
-    template_type: str, # pq, tq, other
+    template_type: str = Form(...), # pq, tq, other
     doc_type: str = Form("rfp"),
     rfp_files: List[UploadFile] = File(...),
     corrigendum_files: List[UploadFile] = File([])

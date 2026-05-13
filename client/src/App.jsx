@@ -3,7 +3,7 @@ import axios from 'axios';
 import { 
   Upload, FileText, Settings, LayoutDashboard, History, 
   CheckCircle2, AlertCircle, FileStack, PlusCircle, 
-  ArrowRight, Search, Bell, User, Clock, HardDrive
+  ArrowRight, Search, Bell, User, Clock, HardDrive, Shield
 } from 'lucide-react';
 import ExtractionTabs from './components/ExtractionTabs';
 import GenerationSection from './components/GenerationSection';
@@ -98,20 +98,17 @@ const App = () => {
               <FileStack className="w-5 h-5 text-white" />
             </div>
             <div>
-              <span className="font-black text-xl tracking-tighter text-slate-900">TenderAI</span>
-              <div className="flex items-center text-[10px] font-bold text-emerald-600 uppercase tracking-widest mt-0.5">
-                <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-1.5 animate-pulse" />
-                Enterprise v2.0
+              <span className="font-black text-xl tracking-tighter text-slate-900 uppercase">TenderAI</span>
+              <div className="flex items-center text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">
+                <Shield className="w-2.5 h-2.5 mr-1.5" />
+                Gov-Cloud Secure
               </div>
             </div>
           </div>
 
           <nav className="space-y-1.5 mb-10">
             {[
-              { icon: LayoutDashboard, label: 'Analysis Hub', active: true },
-              { icon: History, label: 'Audit Logs' },
-              { icon: HardDrive, label: 'Document Vault' },
-              { icon: Settings, label: 'Engine Config' },
+              { icon: LayoutDashboard, label: 'Tender Analysis', active: true },
             ].map((item, idx) => (
               <a
                 key={idx}
@@ -181,17 +178,15 @@ const App = () => {
           </div>
         </div>
 
-        <div className="mt-auto p-8 border-t border-slate-100 bg-slate-50/30">
-          <div className="flex items-center space-x-3 text-slate-400 mb-4">
-            <User className="w-4 h-4" />
-            <span className="text-xs font-bold">Analyst Profile</span>
-          </div>
-          <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
-            <div className="w-2/3 h-full bg-emerald-500 rounded-full" />
-          </div>
-          <div className="flex justify-between mt-2 text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
-            <span>Storage Usage</span>
-            <span>68%</span>
+        <div className="mt-auto p-8 border-t border-slate-100">
+          <div className="bg-slate-900 rounded-2xl p-5 text-white">
+            <div className="flex items-center space-x-3 mb-2">
+              <Shield className="w-4 h-4 text-emerald-400" />
+              <span className="text-[10px] font-black uppercase tracking-widest">Portal Integrity</span>
+            </div>
+            <p className="text-[9px] text-slate-400 font-bold leading-relaxed">
+              System monitoring active. All extractions are logged for audit compliance.
+            </p>
           </div>
         </div>
       </aside>
@@ -199,31 +194,20 @@ const App = () => {
       {/* Workspace Area */}
       <main className="flex-1 flex flex-col overflow-hidden relative">
         <header className="h-20 bg-white/80 backdrop-blur-md border-b border-slate-200 flex items-center justify-between px-10 sticky top-0 z-10">
-          <div className="flex items-center space-x-6">
-            <div className="relative">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input 
-                type="text" 
-                placeholder="Search requirements..." 
-                className="bg-slate-50 border-none rounded-2xl py-2.5 pl-10 pr-4 text-sm font-medium w-80 focus:ring-2 focus:ring-slate-900/5 transition-all outline-none"
-              />
+          <div className="flex items-center space-x-4">
+            <div className="h-10 w-10 bg-slate-50 rounded-xl flex items-center justify-center border border-slate-200">
+              <PlusCircle className="w-5 h-5 text-slate-400" />
             </div>
+            <h2 className="text-sm font-black text-slate-900 uppercase tracking-tight">Intelligence Dashboard</h2>
           </div>
           
           <div className="flex items-center space-x-5">
-            <button className="p-2.5 hover:bg-slate-50 rounded-2xl transition-colors relative">
-              <Bell className="w-5 h-5 text-slate-400" />
-              <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-rose-500 rounded-full border-2 border-white" />
-            </button>
-            <div className="h-8 w-[1px] bg-slate-200" />
-            <div className="flex items-center space-x-3">
-              <div className="text-right">
-                <p className="text-xs font-black text-slate-900">Rohitanshu Dhar</p>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Senior Analyst</p>
-              </div>
-              <div className="w-10 h-10 bg-slate-100 rounded-2xl border border-slate-200 flex items-center justify-center font-black text-slate-400">
-                RD
-              </div>
+            <div className="text-right">
+              <p className="text-xs font-black text-slate-900">Rohitanshu Dhar</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">National Procurement Board</p>
+            </div>
+            <div className="h-10 w-10 bg-slate-900 text-white rounded-xl flex items-center justify-center font-black text-xs">
+              RD
             </div>
           </div>
         </header>

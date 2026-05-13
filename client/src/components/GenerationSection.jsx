@@ -86,47 +86,97 @@ const GenerationSection = ({ type, data, isGenerating, onGenerate, error }) => {
               </button>
             </div>
 
-            <div className="grid grid-cols-1 gap-4">
-              {data.map((req, idx) => (
-                <motion.div 
-                  key={idx}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: idx * 0.05 }}
-                  className="group bg-white rounded-2xl border border-slate-200 p-5 hover:border-emerald-300 hover:shadow-xl hover:shadow-emerald-900/5 transition-all relative overflow-hidden"
-                >
-                  <div className="absolute top-0 left-0 w-1 h-full bg-slate-100 group-hover:bg-emerald-500 transition-all" />
-                  
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center space-x-2">
-                      <span className={`px-2.5 py-1 ${config.bg} ${config.color} text-[10px] font-black uppercase tracking-widest rounded-md border ${config.border}`}>
-                        {req.category || 'General'}
-                      </span>
-                      {req.mandatory && (
-                        <span className="px-2.5 py-1 bg-rose-50 text-rose-600 text-[10px] font-black uppercase tracking-widest rounded-md border border-rose-100">
-                          Critical
+            {type === 'pq' ? (
+              <div className="bg-white rounded-3xl border border-slate-200 shadow-xl shadow-slate-200/50 overflow-hidden">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50/50 border-b border-slate-200">
+                      <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest w-16">Sl#</th>
+                      <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Basic Requirement</th>
+                      <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Specific Requirement</th>
+                      <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Documents Required</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {data.map((req, idx) => (
+                      <motion.tr 
+                        key={idx}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: idx * 0.05 }}
+                        className="hover:bg-emerald-50/30 transition-colors group"
+                      >
+                        <td className="px-6 py-5 align-top">
+                          <span className="text-xs font-black text-slate-300 group-hover:text-emerald-500 transition-colors font-mono">
+                            {String(idx + 1).padStart(2, '0')}
+                          </span>
+                        </td>
+                        <td className="px-6 py-5 align-top">
+                          <span className="px-2.5 py-1 bg-slate-100 text-slate-600 text-[10px] font-black uppercase tracking-tight rounded-md group-hover:bg-emerald-100 group-hover:text-emerald-700 transition-colors">
+                            {req.category || 'General'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-5 align-top">
+                          <p className="text-sm font-bold text-slate-900 leading-snug max-w-xs">
+                            {req.requirement}
+                          </p>
+                        </td>
+                        <td className="px-6 py-5 align-top">
+                          <div className="flex items-start space-x-2">
+                            <FileCheck className="w-3.5 h-3.5 text-emerald-500 mt-0.5 shrink-0" />
+                            <p className="text-xs text-slate-600 font-medium leading-relaxed italic">
+                              {req.description}
+                            </p>
+                          </div>
+                        </td>
+                      </motion.tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-4">
+                {data.map((req, idx) => (
+                  <motion.div 
+                    key={idx}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: idx * 0.05 }}
+                    className="group bg-white rounded-2xl border border-slate-200 p-5 hover:border-emerald-300 hover:shadow-xl hover:shadow-emerald-900/5 transition-all relative overflow-hidden"
+                  >
+                    <div className="absolute top-0 left-0 w-1 h-full bg-slate-100 group-hover:bg-emerald-500 transition-all" />
+                    
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center space-x-2">
+                        <span className={`px-2.5 py-1 ${config.bg} ${config.color} text-[10px] font-black uppercase tracking-widest rounded-md border ${config.border}`}>
+                          {req.category || 'General'}
                         </span>
+                        {req.mandatory && (
+                          <span className="px-2.5 py-1 bg-rose-50 text-rose-600 text-[10px] font-black uppercase tracking-widest rounded-md border border-rose-100">
+                            Critical
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[10px] font-bold text-slate-300 font-mono">#{idx + 1}</span>
+                    </div>
+
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-bold text-slate-900 leading-tight group-hover:text-emerald-950 transition-colors">
+                        {req.requirement}
+                      </h4>
+                      {req.description && (
+                        <div className="flex items-start space-x-2">
+                          <div className="mt-1 w-1 h-1 rounded-full bg-slate-300 shrink-0" />
+                          <p className="text-xs text-slate-500 leading-relaxed font-medium italic">
+                            {req.description}
+                          </p>
+                        </div>
                       )}
                     </div>
-                    <span className="text-[10px] font-bold text-slate-300 font-mono">#{idx + 1}</span>
-                  </div>
-
-                  <div className="space-y-2">
-                    <h4 className="text-sm font-bold text-slate-900 leading-tight group-hover:text-emerald-950 transition-colors">
-                      {req.requirement}
-                    </h4>
-                    {req.description && (
-                      <div className="flex items-start space-x-2">
-                        <div className="mt-1 w-1 h-1 rounded-full bg-slate-300 shrink-0" />
-                        <p className="text-xs text-slate-500 leading-relaxed font-medium italic">
-                          {req.description}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </motion.div>
-              ))}
-            </div>
+                  </motion.div>
+                ))}
+              </div>
+            )}
           </motion.div>
         ) : (
           <motion.div
