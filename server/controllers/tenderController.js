@@ -2,6 +2,9 @@ import Tender from '../models/Tender.js';
 import Document from '../models/Document.js';
 import Requirement from '../models/Requirement.js';
 import axios from 'axios';
+import fs from 'fs';
+import path from 'path';
+import { Blob, File } from 'buffer';
 
 export const createTender = async (req, res) => {
     console.log("Creating/Updating Tender Payload:", req.body);
@@ -121,7 +124,7 @@ export const getTenderRequirements = async (req, res) => {
 
 export const batchExtract = async (req, res) => {
     try {
-        const { doc_type, tender_id } = req.body;
+        const { doc_type } = req.body;
         const rfpFiles = req.files['rfp_files'] || [];
         const corrigendumFiles = req.files['corrigendum_files'] || [];
 
@@ -136,29 +139,24 @@ export const batchExtract = async (req, res) => {
         const extractionPromises = agents.map(async (agent) => {
             const formData = new FormData();
             
-            // Re-append files to the FormData for each agent call
-            const { Blob, File } = await import('buffer');
-            
-            rfpFiles.forEach(f => {
-                const file = new File([f.buffer], f.originalname, { type: f.mimetype });
+            for (const f of rfpFiles) {
+                const buffer = fs.readFileSync(f.path);
+                const file = new File([buffer], f.originalname, { type: f.mimetype });
                 formData.append('rfp_files', file);
-            });
-            corrigendumFiles.forEach(f => {
-                const file = new File([f.buffer], f.originalname, { type: f.mimetype });
+            }
+            for (const f of corrigendumFiles) {
+                const buffer = fs.readFileSync(f.path);
+                const file = new File([buffer], f.originalname, { type: f.mimetype });
                 formData.append('corrigendum_files', file);
-            });
+            }
             
             formData.append('doc_type', doc_type);
             formData.append('template_type', agent);
 
             const url = agent === 'general' ? `${AI_API_BASE}/extract/` : `${AI_API_BASE}/extract/generate-template`;
             
-            console.log(`[BatchExtract] Calling ${agent} agent at ${url}...`);
-            
             try {
-                // Using axios for internal call as it handles FormData boundaries more reliably in Node
                 const response = await axios.post(url, formData);
-                console.log(`[BatchExtract] ${agent} agent success.`);
                 return { agent, data: response.data };
             } catch (err) {
                 console.error(`[BatchExtract] ${agent} agent failed:`, err.response?.data || err.message);
@@ -167,11 +165,33 @@ export const batchExtract = async (req, res) => {
         });
 
         const results = await Promise.all(extractionPromises);
+        const generalData = results.find(r => r.agent === 'general').data.data;
+        const tenderId = generalData.tender_id || `TND-${Date.now()}`;
+
+        // Save documents to DB
+        const docPromises = [];
+        rfpFiles.forEach(f => {
+            docPromises.push(Document.create({
+                tenderId,
+                name: f.originalname,
+                type: doc_type.toUpperCase(),
+                filePath: f.path.replace(/\\/g, '/')
+            }));
+        });
+        corrigendumFiles.forEach(f => {
+            docPromises.push(Document.create({
+                tenderId,
+                name: f.originalname,
+                type: 'CORRIGENDUM',
+                filePath: f.path.replace(/\\/g, '/')
+            }));
+        });
+        await Promise.all(docPromises);
         
         const output = {
             general: {
-                ...results.find(r => r.agent === 'general').data.data,
-                estimated_value: results.find(r => r.agent === 'general').data.data.estimated_value || "N/A"
+                ...generalData,
+                estimated_value: generalData.estimated_value || "N/A"
             },
             pq: results.find(r => r.agent === 'pq').data.requirements,
             tq: results.find(r => r.agent === 'tq').data.requirements
@@ -180,6 +200,85 @@ export const batchExtract = async (req, res) => {
         res.json(output);
     } catch (error) {
         console.error("Batch extraction overall error:", error.message);
+        res.status(500).json({ message: error.message });
+    }
+};
+
+export const regenerate = async (req, res) => {
+    try {
+        const { tenderId } = req.params;
+        const newCorrigenda = req.files['corrigendum_files'] || [];
+        
+        // 1. Fetch existing tender and documents
+        const tender = await Tender.findOne({ tenderId });
+        if (!tender) return res.status(404).json({ message: 'Tender not found' });
+
+        const existingDocs = await Document.find({ tenderId });
+        const rfpDoc = existingDocs.find(d => ['RFP', 'RFQ', 'EOI'].includes(d.type));
+        const oldCorrigenda = existingDocs.filter(d => d.type === 'CORRIGENDUM');
+
+        if (!rfpDoc) return res.status(400).json({ message: 'Original RFP document missing' });
+
+        // 2. Save new corrigenda to DB first
+        const newDocPromises = newCorrigenda.map(f => Document.create({
+            tenderId,
+            name: f.originalname,
+            type: 'CORRIGENDUM',
+            filePath: f.path.replace(/\\/g, '/')
+        }));
+        const savedNewDocs = await Promise.all(newDocPromises);
+        
+        // 3. Prepare ALL files for AI service (Original RFP + Old Corrigenda + New Corrigenda)
+        const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
+        const AI_API_BASE = `${AI_SERVICE_URL}/api/v1`;
+
+        const agents = ['general', 'pq', 'tq'];
+        const extractionPromises = agents.map(async (agent) => {
+            const formData = new FormData();
+            
+            // Original RFP
+            const rfpBuffer = fs.readFileSync(rfpDoc.filePath);
+            formData.append('rfp_files', new File([rfpBuffer], rfpDoc.name, { type: 'application/pdf' }));
+
+            // ALL Corrigenda (Old + New)
+            for (const doc of [...oldCorrigenda, ...savedNewDocs]) {
+                const buffer = fs.readFileSync(doc.filePath);
+                formData.append('corrigendum_files', new File([buffer], doc.name, { type: 'application/pdf' }));
+            }
+            
+            formData.append('doc_type', tender.tenderType.toLowerCase());
+            formData.append('template_type', agent);
+
+            const url = agent === 'general' ? `${AI_API_BASE}/extract/` : `${AI_API_BASE}/extract/generate-template`;
+            const response = await axios.post(url, formData);
+            return { agent, data: response.data };
+        });
+
+        const results = await Promise.all(extractionPromises);
+        const generalData = results.find(r => r.agent === 'general').data.data;
+
+        // 4. Update Requirements in DB
+        const pq = results.find(r => r.agent === 'pq').data.requirements;
+        const tq = results.find(r => r.agent === 'tq').data.requirements;
+
+        await Requirement.deleteMany({ tenderId });
+        const requirementDocs = [
+            ...pq.map(r => ({ tenderId, category: 'PQ', key: r.key, value: r.value })),
+            ...tq.map(r => ({ tenderId, category: 'TQ', key: r.key, value: r.value }))
+        ];
+        await Requirement.insertMany(requirementDocs);
+
+        // Update tender template status
+        tender.hasTemplate = true;
+        await tender.save();
+
+        res.json({ 
+            general: generalData,
+            pq, 
+            tq 
+        });
+    } catch (error) {
+        console.error("Regeneration error:", error.message);
         res.status(500).json({ message: error.message });
     }
 };

@@ -3,7 +3,7 @@ import axios from 'axios';
 import { ArrowLeft } from 'lucide-react';
 import AnalysisMatrix from '../components/AnalysisMatrix';
 
-const GenerateTemplate = ({ tender, onBack, onSave }) => {
+const GenerateTemplate = ({ tender, initialCorrigenda = [], onBack, onSave }) => {
   const [isSaving, setIsSaving] = React.useState(false);
 
   const handleSave = async (extractions) => {
@@ -66,6 +66,7 @@ const GenerateTemplate = ({ tender, onBack, onSave }) => {
             tenderId={tender?.tenderId}
             onSave={handleSave}
             initialDocType={tender?.tenderType?.toLowerCase() || 'rfp'}
+            initialCorrigendumFiles={initialCorrigenda}
           />
         </div>
       </div>

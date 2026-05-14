@@ -137,35 +137,52 @@ const AnalysisMatrix = ({
     }
   };
 
-  // Auto-trigger General Intelligence if files are pre-loaded (Add Tender flow)
+  // Auto-trigger if initial files are pre-loaded (Add Tender or Regenerate flow)
   React.useEffect(() => {
-    if (initialRfpFiles.length > 0 && !extractions.general && !generating.general) {
+    if (initialCorrigendumFiles.length > 0 && workflowState === 'ingestion') {
+      setHasCorrigendum(true);
+      setCorrigendumFiles(initialCorrigendumFiles);
+      // Auto-trigger extraction
+      startParallelExtraction(initialCorrigendumFiles);
+    } else if (initialRfpFiles.length > 0 && !extractions.general && !generating.general) {
       generateForType('general');
     }
-  }, [initialRfpFiles.length, extractions.general, generating.general]);
+  }, [initialRfpFiles.length, initialCorrigendumFiles.length]);
   
-  const startParallelExtraction = async () => {
-    if (rfpFiles.length === 0) {
+  const startParallelExtraction = async (filesToUse = null) => {
+    const corrFiles = filesToUse || corrigendumFiles;
+    
+    // In regeneration mode, RFP is constant on server
+    const isRegen = mode === 'persistent' && corrFiles.length > 0 && rfpFiles.length === 0;
+    
+    if (rfpFiles.length === 0 && !isRegen) {
       alert("Main document is required!");
       return;
     }
+
     setWorkflowState('processing');
     setGenerating({ general: true, pq: true, tq: true, other: false });
 
     try {
       const formData = new FormData();
       rfpFiles.forEach(file => formData.append('rfp_files', file));
-      corrigendumFiles.forEach(file => formData.append('corrigendum_files', file));
+      corrFiles.forEach(file => formData.append('corrigendum_files', file));
       formData.append('doc_type', selectedDocType);
       
-      const response = await axios.post('http://localhost:5001/api/tenders/batch-extract', formData);
+      let response;
+      if (isRegen) {
+        response = await axios.post(`http://localhost:5001/api/tenders/${encodeURIComponent(tenderId)}/regenerate`, formData);
+      } else {
+        response = await axios.post('http://localhost:5001/api/tenders/batch-extract', formData);
+      }
+      
       const { general, pq, tq } = response.data;
 
       // Map General Metadata
       setRawMetadata({
-        id: general.tender_id,
+        id: general.tender_id || tenderId,
         title: general.title,
-        authority: general.organization,
+        authority: general.organization || general.authority,
         department: general.department || "Public Works",
         type: general.tender_type || selectedDocType.toUpperCase(),
         estimated_value: general.estimated_value || "N/A",
@@ -177,7 +194,7 @@ const AnalysisMatrix = ({
         general: [
           { category: 'Scope Overview', key: general.title || 'Project Definition', value: `Dept: ${general.department || 'Public Works'} | Type: ${general.tender_type || selectedDocType.toUpperCase()}`, mandatory: true },
           { category: 'Temporal Compliance', key: `Bid Closing: ${general.date_of_closing || 'N/A'}`, value: `Publish Date: ${general.date_of_publish || 'N/A'}`, mandatory: true },
-          { category: 'Metadata', key: `Tender ID: ${general.tender_id || 'N/A'}`, value: `Authority: ${general.organization || 'N/A'}`, mandatory: false },
+          { category: 'Metadata', key: `Tender ID: ${general.tender_id || tenderId}`, value: `Authority: ${general.organization || 'N/A'}`, mandatory: false },
         ],
         pq: pq,
         tq: tq,
@@ -188,7 +205,7 @@ const AnalysisMatrix = ({
 
       setWorkflowState('review');
     } catch (err) {
-      console.error("Batch extraction failed", err);
+      console.error("Extraction failed", err);
       alert("Extraction failed. Please check backend logs.");
       setWorkflowState('ingestion');
     } finally {
@@ -231,20 +248,20 @@ const AnalysisMatrix = ({
     return (
       <div className="max-w-4xl mx-auto w-full py-10 space-y-12">
         <div className="text-center space-y-4">
-          <div className="inline-flex items-center space-x-2 px-4 py-2 bg-emerald-50 text-emerald-600 rounded-full text-[10px] font-black uppercase tracking-widest">
+          <div className="inline-flex items-center space-x-2 px-4 py-2 bg-orange-50 text-orange-600 rounded-full text-[10px] font-semibold uppercase tracking-widest">
             <Wand2 size={12} />
             <span>AI Ingestion Engine</span>
           </div>
-          <h1 className="text-5xl font-black text-slate-900 tracking-tighter">Initialize Extraction</h1>
-          <p className="text-slate-500 text-lg font-medium">Configure your document source and corrigenda sequence.</p>
+          <h1 className="text-5xl font-semibold text-slate-800 tracking-tight">Initialize Extraction</h1>
+          <p className="text-slate-500 text-lg font-medium italic">Configure your document source and corrigenda sequence.</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* Step 1: Document Type */}
           <div className="p-10 bg-white border border-slate-100 rounded-[2.5rem] shadow-sm space-y-6">
             <div className="flex items-center space-x-4 mb-2">
-              <div className="h-10 w-10 bg-slate-900 text-white rounded-2xl flex items-center justify-center font-black">1</div>
-              <h3 className="text-xl font-black text-slate-900">Document Source</h3>
+              <div className="h-10 w-10 bg-slate-900 text-white rounded-2xl flex items-center justify-center font-semibold">1</div>
+              <h3 className="text-xl font-semibold text-slate-900">Document Source</h3>
             </div>
             
             <div className="space-y-4">
@@ -252,7 +269,7 @@ const AnalysisMatrix = ({
               <select 
                 value={selectedDocType}
                 onChange={(e) => setSelectedDocType(e.target.value)}
-                className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-slate-900 transition-all appearance-none"
+                className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-orange-500 transition-all appearance-none"
               >
                 <option value="rfp">Request for Proposal (RFP)</option>
                 <option value="rfq">Request for Quotation (RFQ)</option>
@@ -262,9 +279,9 @@ const AnalysisMatrix = ({
 
             <div className="space-y-4">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block px-1">Primary Document</label>
-              <label className="group flex flex-col items-center justify-center p-8 border-2 border-dashed border-slate-200 rounded-[2rem] cursor-pointer hover:border-slate-400 transition-all bg-slate-50/50">
-                <PlusCircle className="w-8 h-8 text-slate-400 mb-2 group-hover:scale-110 transition-transform" />
-                <span className="text-xs font-black text-slate-900">Upload Original {selectedDocType.toUpperCase()}</span>
+              <label className="group flex flex-col items-center justify-center p-8 border-2 border-dashed border-slate-200 rounded-[2rem] cursor-pointer hover:border-orange-400 transition-all bg-slate-50/50">
+                <PlusCircle className="w-8 h-8 text-slate-400 mb-2 group-hover:scale-110 transition-transform group-hover:text-orange-500" />
+                <span className="text-xs font-semibold text-slate-900">Upload Original {selectedDocType.toUpperCase()}</span>
                 <input type="file" className="hidden" multiple={false} onChange={(e) => {
                   handleUpload(e, 'rfp');
                 }} />
@@ -285,8 +302,8 @@ const AnalysisMatrix = ({
           {/* Step 2: Corrigenda */}
           <div className="p-10 bg-white border border-slate-100 rounded-[2.5rem] shadow-sm space-y-6">
             <div className="flex items-center space-x-4 mb-2">
-              <div className="h-10 w-10 bg-emerald-600 text-white rounded-2xl flex items-center justify-center font-black">2</div>
-              <h3 className="text-xl font-black text-slate-900">Corrigenda Status</h3>
+              <div className="h-10 w-10 bg-orange-600 text-white rounded-2xl flex items-center justify-center font-semibold">2</div>
+              <h3 className="text-xl font-semibold text-slate-900">Corrigenda Status</h3>
             </div>
 
             <div className="space-y-4">
@@ -294,7 +311,7 @@ const AnalysisMatrix = ({
               <div className="flex p-1.5 bg-slate-100 rounded-2xl">
                 <button 
                   onClick={() => setHasCorrigendum(true)}
-                  className={`flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${hasCorrigendum ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400'}`}
+                  className={`flex-1 py-3 rounded-xl text-xs font-semibold uppercase tracking-wider transition-all ${hasCorrigendum ? 'bg-white text-orange-600 shadow-sm border border-orange-100' : 'text-slate-400'}`}
                 >
                   Yes, Add
                 </button>
@@ -303,7 +320,7 @@ const AnalysisMatrix = ({
                     setHasCorrigendum(false);
                     setCorrigendumFiles([]);
                   }}
-                  className={`flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${!hasCorrigendum ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400'}`}
+                  className={`flex-1 py-3 rounded-xl text-xs font-semibold uppercase tracking-wider transition-all ${!hasCorrigendum ? 'bg-white text-slate-600 shadow-sm border border-slate-100' : 'text-slate-400'}`}
                 >
                   No Corrigendum
                 </button>
@@ -313,9 +330,9 @@ const AnalysisMatrix = ({
             {hasCorrigendum && (
               <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block px-1">Upload Corrigenda</label>
-                <label className="group flex flex-col items-center justify-center p-8 border-2 border-dashed border-emerald-100 rounded-[2rem] cursor-pointer hover:border-emerald-300 transition-all bg-emerald-50/20">
-                  <PlusCircle className="w-8 h-8 text-emerald-600 mb-2 group-hover:scale-110 transition-transform" />
-                  <span className="text-xs font-black text-emerald-900">Add Corrigendum Docs</span>
+                <label className="group flex flex-col items-center justify-center p-8 border-2 border-dashed border-orange-100 rounded-[2rem] cursor-pointer hover:border-orange-300 transition-all bg-orange-50/20">
+                  <PlusCircle className="w-8 h-8 text-orange-600 mb-2 group-hover:scale-110 transition-transform" />
+                  <span className="text-xs font-semibold text-orange-900">Add Corrigendum Docs</span>
                   <input type="file" className="hidden" multiple onChange={(e) => {
                     handleUpload(e, 'corrigendum');
                   }} />
@@ -323,9 +340,9 @@ const AnalysisMatrix = ({
                 {corrigendumFiles.length > 0 && (
                   <div className="space-y-2 mt-4 px-2">
                     {corrigendumFiles.map((f, i) => (
-                      <div key={i} className="flex items-center justify-between p-3 bg-emerald-50/50 rounded-xl border border-emerald-100/50">
-                        <span className="text-[10px] font-bold text-emerald-700 truncate max-w-[200px]">{f.name}</span>
-                        <button onClick={() => handleRemoveFile(i, 'corrigendum')} className="text-emerald-400 hover:text-rose-500"><XCircle size={14} /></button>
+                      <div key={i} className="flex items-center justify-between p-3 bg-orange-50/50 rounded-xl border border-orange-100/50">
+                        <span className="text-[10px] font-semibold text-orange-700 truncate max-w-[200px]">{f.name}</span>
+                        <button onClick={() => handleRemoveFile(i, 'corrigendum')} className="text-orange-400 hover:text-rose-500"><XCircle size={14} /></button>
                       </div>
                     ))}
                   </div>
@@ -338,9 +355,9 @@ const AnalysisMatrix = ({
         {/* Action Button */}
         <div className="flex justify-center pt-8">
           <button 
-            onClick={startParallelExtraction}
-            disabled={rfpFiles.length === 0}
-            className="px-12 py-6 bg-slate-900 text-white rounded-[2rem] font-black text-lg uppercase tracking-[0.2em] shadow-2xl shadow-slate-200 hover:scale-105 active:scale-95 transition-all disabled:opacity-30 disabled:hover:scale-100 flex items-center space-x-4"
+            onClick={() => startParallelExtraction()}
+            disabled={rfpFiles.length === 0 && !(mode === 'persistent' && corrigendumFiles.length > 0)}
+            className="px-12 py-6 bg-slate-900 text-white rounded-[2rem] font-semibold text-lg uppercase tracking-[0.2em] shadow-2xl shadow-slate-200 hover:scale-105 active:scale-95 transition-all disabled:opacity-30 disabled:hover:scale-100 flex items-center space-x-4"
           >
             <span>Verify & Extract</span>
             <ArrowRight size={24} />
@@ -355,14 +372,14 @@ const AnalysisMatrix = ({
       <div className="flex flex-col items-center justify-center py-40 space-y-8">
         <div className="relative">
           <div className="w-32 h-32 border-[12px] border-slate-100 rounded-full" />
-          <div className="w-32 h-32 border-[12px] border-emerald-500 border-t-transparent rounded-full animate-spin absolute top-0 left-0" />
+          <div className="w-32 h-32 border-[12px] border-orange-500 border-t-transparent rounded-full animate-spin absolute top-0 left-0" />
           <div className="absolute inset-0 flex items-center justify-center">
             <BarChart4 size={32} className="text-slate-900 animate-pulse" />
           </div>
         </div>
         <div className="text-center space-y-2">
-          <h2 className="text-3xl font-black text-slate-900 tracking-tight uppercase">Simultaneous Extraction</h2>
-          <p className="text-slate-500 font-bold uppercase tracking-widest text-xs">General, PQ, and TQ Agents are working together...</p>
+          <h2 className="text-3xl font-semibold text-slate-800 tracking-tight uppercase">Simultaneous Extraction</h2>
+          <p className="text-slate-400 font-semibold uppercase tracking-widest text-xs italic">General, PQ, and TQ Agents are working together...</p>
         </div>
       </div>
     );
@@ -385,7 +402,7 @@ const AnalysisMatrix = ({
             </button>
             <button 
               onClick={() => onSave({ ...extractions, general_metadata: rawMetadata })}
-              className="px-10 py-4 bg-emerald-600 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-xl shadow-emerald-100 hover:bg-emerald-500 transition-all active:scale-95 flex items-center space-x-3"
+              className="px-10 py-4 bg-orange-600 text-white rounded-2xl font-semibold uppercase tracking-widest text-[10px] shadow-xl shadow-orange-100 hover:bg-orange-500 transition-all active:scale-95 flex items-center space-x-3"
             >
               <Save size={16} />
               <span>Save Tender to Cloud</span>

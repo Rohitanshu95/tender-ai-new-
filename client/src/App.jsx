@@ -107,8 +107,11 @@ const App = () => {
     setActiveTab('template-view');
   };
 
-  const handleGenerateTemplate = (tender) => {
+  const [extraCorrigenda, setExtraCorrigenda] = useState([]);
+
+  const handleGenerateTemplate = (tender, newCorrigenda = []) => {
     setSelectedTender(tender);
+    setExtraCorrigenda(newCorrigenda);
     setActiveTab('generate-template');
   };
 
@@ -134,7 +137,7 @@ const App = () => {
       case 'template-view':
         return <TemplateView tender={selectedTender} onBack={() => setActiveTab('ai-configure')} />;
       case 'generate-template':
-        return <GenerateTemplate tender={selectedTender} onBack={() => setActiveTab('ai-configure')} onSave={() => setActiveTab('ai-configure')} />;
+        return <GenerateTemplate tender={selectedTender} initialCorrigenda={extraCorrigenda} onBack={() => setActiveTab('ai-configure')} onSave={() => setActiveTab('ai-configure')} />;
       case 'evaluations':
         return <Evaluations 
           onBack={() => setActiveTab('dashboard')} 
