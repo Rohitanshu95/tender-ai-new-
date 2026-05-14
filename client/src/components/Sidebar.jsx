@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  LayoutDashboard, 
-  Briefcase, 
-  Settings2, 
-  CheckSquare, 
-  FileText, 
+import {
+  LayoutDashboard,
+  Briefcase,
+  Settings2,
+  CheckSquare,
+  FileText,
   FileSearch,
   ChevronLeft,
   ChevronRight,
@@ -17,6 +17,7 @@ const menuItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { id: 'tenders', label: 'Tenders', icon: Briefcase },
   { id: 'ai-configure', label: 'AI Configure', icon: Settings2 },
+  { id: 'proposals', label: 'Proposals', icon: FileStack },
   { id: 'evaluations', label: 'Evaluations', icon: CheckSquare },
   { id: 'reports', label: 'Reports', icon: FileText },
 ];
@@ -53,7 +54,7 @@ const Sidebar = ({ activeTab, onTabChange }) => {
               <span className="font-semibold text-xl tracking-tight text-slate-700 uppercase">TenderAI</span>
               <div className="flex items-center text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">
                 <Shield className="w-2.5 h-2.5 mr-1.5" />
-                Gov-Cloud Secure
+                govt of odisha
               </div>
             </motion.div>
           )}
@@ -67,11 +68,10 @@ const Sidebar = ({ activeTab, onTabChange }) => {
               <button
                 key={item.id}
                 onClick={() => onTabChange(item.id)}
-                className={`w-full flex items-center p-3 rounded-2xl text-sm font-semibold transition-all group relative ${
-                  isActive 
-                    ? 'bg-orange-600 text-white shadow-xl shadow-orange-100' 
+                className={`w-full flex items-center p-3 rounded-2xl text-sm font-semibold transition-all group relative ${isActive
+                    ? 'bg-orange-600 text-white shadow-xl shadow-orange-100'
                     : 'text-slate-400 hover:bg-slate-50 hover:text-slate-600'
-                } ${isCollapsed ? 'justify-center' : 'justify-between'}`}
+                  } ${isCollapsed ? 'justify-center' : 'justify-between'}`}
               >
                 <div className={`flex items-center ${isCollapsed ? '' : 'space-x-3'}`}>
                   <item.icon className={`w-5 h-5 shrink-0 ${isActive ? 'text-white' : 'group-hover:text-slate-600'}`} />
@@ -91,7 +91,7 @@ const Sidebar = ({ activeTab, onTabChange }) => {
                     className="w-1.5 h-1.5 bg-white rounded-full"
                   />
                 )}
-                
+
                 {/* Tooltip for Collapsed State */}
                 {isCollapsed && (
                   <div className="absolute left-full ml-4 px-3 py-1.5 bg-orange-600 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50">
@@ -105,7 +105,7 @@ const Sidebar = ({ activeTab, onTabChange }) => {
 
         {/* Footer Integrity Box */}
         {!isCollapsed && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             className="mt-auto pt-6 border-t border-slate-100"

@@ -9,6 +9,8 @@ import GenerateTemplate from './pages/GenerateTemplate';
 import AddTender from './pages/AddTender';
 import PQEvaluation from './pages/PQEvaluation';
 import TQEvaluation from './pages/TQEvaluation';
+import Proposals from './pages/Proposals';
+import UploadProposal from './pages/UploadProposal';
 
 // Placeholder Components
 // Placeholder Components
@@ -120,6 +122,10 @@ const App = () => {
     setActiveTab('edit-tender');
   };
 
+  const handleUploadComplete = () => {
+    setActiveTab('proposals');
+  };
+
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard':
@@ -148,6 +154,10 @@ const App = () => {
         return <PQEvaluation tenderId="T-001" onComplete={() => setActiveTab('evaluations')} />;
       case 'tq-eval':
         return <TQEvaluation tenderId="T-001" onComplete={() => setActiveTab('evaluations')} />;
+      case 'proposals':
+        return <Proposals onUpload={() => setActiveTab('upload-proposal')} onBack={() => setActiveTab('dashboard')} />;
+      case 'upload-proposal':
+        return <UploadProposal onBack={() => setActiveTab('proposals')} onSave={handleUploadComplete} />;
       case 'reports':
         return <Reports onBack={() => setActiveTab('dashboard')} />;
       default:
