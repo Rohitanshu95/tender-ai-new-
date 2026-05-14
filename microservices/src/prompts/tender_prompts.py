@@ -4,7 +4,9 @@ EXTRACTION_SYSTEM_MESSAGE = (
     "IMPORTANT: There may be multiple corrigenda provided in the 'CORRIGENDUM UPDATES' section. "
     "Corrigendum 2 might update a date already changed by Corrigendum 1. "
     "You must track the timeline of these updates and ensure the final values reflect the most recent information provided across ALL documents. "
-    "Always favor information in 'CORRIGENDUM UPDATES' sections over the 'MAIN RFP' section."
+    "Always favor information in 'CORRIGENDUM UPDATES' sections over the 'MAIN RFP' section.\n\n"
+    "FOR TENDER TYPE: Classify as 'RFP', 'RFQ', or 'EOI'.\n"
+    "FOR DEPARTMENT: Classify as 'Public Works', 'IT & Electronics', or 'Education' based on the content if not explicitly stated."
 )
 
 EXTRACTION_HUMAN_MESSAGE = (
@@ -51,23 +53,16 @@ def get_template_system_message(template_type: str) -> str:
     base_msg = TEMPLATE_PROMPTS.get(template_type, TEMPLATE_PROMPTS["other"])
     
     output_rules = (
-        "- Provide a structured list of requirements.\n"
-        "- For each requirement, provide a clear 'Condition' and 'Weightage' (if mentioned).\n"
-        "- Be thorough and do not miss subtle requirements buried in long paragraphs."
+        "- Provide your response as a JSON list of objects.\n"
+        "- Each object MUST have these keys: 'category', 'key', 'value', 'mandatory'.\n"
+        "- Map your findings as follows:\n"
+        "  * 'category' = Broad requirement area (e.g., Financial, Experience, Technical)\n"
+        "  * 'key' = A short, descriptive title for the requirement\n"
+        "  * 'value' = The specific threshold, detail, or document requested\n"
+        "  * 'mandatory' = boolean (usually true)\n"
+        "- Be meticulous. Do not omit details."
     )
     
-    if template_type == "pq":
-        output_rules = (
-            "- Provide your response as a JSON list of objects.\n"
-            "- Each object MUST have these keys: 'category', 'requirement', 'description', 'mandatory'.\n"
-            "- Map your findings as follows:\n"
-            "  * 'category' = Basic Requirement\n"
-            "  * 'requirement' = Specific Requirement\n"
-            "  * 'description' = Documents Required\n"
-            "  * 'mandatory' = boolean (always true for PQ unless explicitly optional)\n"
-            "- Ensure EVERY document requested in the RFP is listed in the 'description' field."
-        )
-
     return f"{base_msg}\n\nOUTPUT RULES:\n{output_rules}"
 
 TEMPLATE_HUMAN_MESSAGE = "Identify and extract all specific requirements for the {template_type} section from the following text:\n\n{text}"

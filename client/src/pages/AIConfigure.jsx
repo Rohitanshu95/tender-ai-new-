@@ -1,18 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { 
   ChevronRight, Eye, RefreshCw, Wand2, Search, Filter, Info, ArrowLeft
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-const mockConfigTenders = [
-  { id: 1, tender_id: 'TND-2026-001', title: 'Road Construction - Phase 2', status: 'Template Generated' },
-  { id: 2, tender_id: 'TND-2026-002', title: 'IT Infrastructure Upgrade', status: 'Not Configured' },
-  { id: 3, tender_id: 'TND-2026-003', title: 'Healthcare Equipment Supply', status: 'Template Generated' },
-  { id: 4, tender_id: 'TND-2026-005', title: 'Solar Power Installation', status: 'Not Configured' },
-];
-
 const AIConfigure = ({ onView, onBack, onGenerate }) => {
-  const [tenders, setTenders] = useState(mockConfigTenders);
+  const [tenders, setTenders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  useEffect(() => {
+    const fetchTenders = async () => {
+      try {
+        const res = await axios.get('http://localhost:5001/api/tenders');
+        setTenders(res.data);
+      } catch (err) {
+        console.error("Failed to fetch tenders for configuration", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchTenders();
+  }, []);
+
+  const filteredTenders = tenders.filter(t => 
+    (t.title || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (t.tenderId || "").toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-[#fcfcfd]">
@@ -61,7 +76,9 @@ const AIConfigure = ({ onView, onBack, onGenerate }) => {
                 <input 
                   type="text" 
                   placeholder="Filter tenders..." 
-                  className="pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:ring-2 focus:ring-slate-900 transition-all w-48"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:ring-2 focus:ring-slate-900 transition-all w-48 shadow-sm"
                 />
               </div>
             </div>
@@ -78,32 +95,44 @@ const AIConfigure = ({ onView, onBack, onGenerate }) => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {tenders.map((tender, idx) => (
+                {loading ? (
+                  <tr>
+                    <td colSpan={4} className="py-20 text-center text-slate-400 font-bold uppercase tracking-widest text-[10px]">
+                      Loading real data...
+                    </td>
+                  </tr>
+                ) : filteredTenders.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="py-20 text-center text-slate-400 font-bold uppercase tracking-widest text-[10px]">
+                      No matching tenders found
+                    </td>
+                  </tr>
+                ) : filteredTenders.map((tender, idx) => (
                   <motion.tr 
-                    key={tender.id} 
+                    key={tender._id || tender.tenderId} 
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: idx * 0.05 }}
                     className="hover:bg-slate-50/50 transition-colors group"
                   >
                     <td className="px-8 py-6">
-                      <span className="text-sm font-black text-slate-900">{tender.tender_id}</span>
+                      <span className="text-sm font-black text-slate-900">{tender.tenderId}</span>
                     </td>
                     <td className="px-8 py-6">
                       <span className="text-sm font-bold text-slate-600 group-hover:text-slate-900 transition-colors">{tender.title}</span>
                     </td>
                     <td className="px-8 py-6 text-center">
                       <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-tight border ${
-                        tender.status === 'Template Generated' 
+                        tender.hasTemplate 
                           ? 'bg-emerald-50 text-emerald-600 border-emerald-100' 
                           : 'bg-slate-50 text-slate-400 border-slate-100'
                       }`}>
-                        {tender.status}
+                        {tender.hasTemplate ? 'Template Generated' : 'Not Configured'}
                       </span>
                     </td>
                     <td className="px-8 py-6 text-right">
                       <div className="flex items-center justify-end space-x-3">
-                        {tender.status === 'Template Generated' ? (
+                        {tender.hasTemplate ? (
                           <>
                             <button 
                               onClick={() => onView(tender)}
@@ -112,7 +141,10 @@ const AIConfigure = ({ onView, onBack, onGenerate }) => {
                               <Eye size={14} />
                               <span>View Template</span>
                             </button>
-                            <button className="flex items-center space-x-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-[11px] font-black text-slate-600 hover:border-slate-400 hover:text-slate-900 transition-all">
+                            <button 
+                              onClick={() => onGenerate(tender)}
+                              className="flex items-center space-x-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-[11px] font-black text-slate-600 hover:border-slate-400 hover:text-slate-900 transition-all"
+                            >
                               <RefreshCw size={14} />
                               <span>Regenerate</span>
                             </button>
@@ -136,7 +168,7 @@ const AIConfigure = ({ onView, onBack, onGenerate }) => {
           
           <div className="p-8 bg-slate-50/30 border-t border-slate-100">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Showing {tenders.length} entries</span>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Showing {filteredTenders.length} entries</span>
               <div className="flex items-center space-x-2">
                 <button className="p-2 text-slate-400 hover:text-slate-900 transition-colors"><ChevronRight size={16} className="rotate-180" /></button>
                 <div className="w-8 h-8 flex items-center justify-center bg-slate-900 text-white text-xs font-black rounded-lg shadow-lg">1</div>

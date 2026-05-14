@@ -11,7 +11,7 @@ const tabs = [
 
 const ExtractionTabs = ({ activeTab, setActiveTab, completedSections }) => {
   return (
-    <div className="flex space-x-1 p-1 bg-slate-100 rounded-xl mb-6">
+    <div className="flex space-x-1 p-1 bg-slate-100 rounded-xl mb-6 overflow-x-auto scrollbar-hide">
       {tabs.map((tab) => {
         const Icon = tab.icon;
         const isActive = activeTab === tab.id;
@@ -22,7 +22,7 @@ const ExtractionTabs = ({ activeTab, setActiveTab, completedSections }) => {
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={`
-              relative flex items-center flex-1 justify-center py-2.5 px-4 rounded-lg text-sm font-medium transition-all duration-200
+              relative flex items-center shrink-0 flex-1 min-w-fit justify-center py-2.5 px-4 rounded-lg text-xs font-black uppercase tracking-tight transition-all duration-200 whitespace-nowrap
               ${isActive ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'}
             `}
           >

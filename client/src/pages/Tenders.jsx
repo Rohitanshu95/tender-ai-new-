@@ -1,18 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { 
-  Search, Plus, Eye, Edit3, FileText, ChevronRight, Filter, ArrowLeft
+  Search, Plus, Eye, Edit3, Trash2, FileText, ChevronRight, Filter, ArrowLeft
 } from 'lucide-react';
 
-const API_BASE_URL = 'http://localhost:8000/api/v1';
-
-const mockTenders = [
-  { id: 1, tender_id: 'TND-2026-001', title: 'Road Construction - Phase 2', tender_type: 'RFP', organization: 'Public Works', status: 'In Evaluation', date_of_publish: '2026-03-15', date_of_closing: '2026-04-15' },
-  { id: 2, tender_id: 'TND-2026-002', title: 'IT Infrastructure Upgrade', tender_type: 'RFQ', organization: 'IT & Electronics', status: 'Published', date_of_publish: '2026-04-01', date_of_closing: '2026-04-20' },
-  { id: 3, tender_id: 'TND-2026-003', title: 'Healthcare Equipment Supply', tender_type: 'EoI', organization: 'Health & Family Welfare', status: 'Draft', date_of_publish: '2026-04-05', date_of_closing: '2026-05-01' },
-  { id: 4, tender_id: 'TND-2026-004', title: 'Educational Material Procurement', tender_type: 'RFP', organization: 'Education', status: 'Completed', date_of_publish: '2026-02-10', date_of_closing: '2026-03-10' },
-  { id: 5, tender_id: 'TND-2026-005', title: 'Solar Power Installation', tender_type: 'RFP', organization: 'Energy', status: 'In Evaluation', date_of_publish: '2026-03-20', date_of_closing: '2026-04-18' },
-];
+const API_BASE_URL = 'http://localhost:5001/api';
 
 const StatusBadge = ({ status }) => {
   const styles = {
@@ -29,38 +21,48 @@ const StatusBadge = ({ status }) => {
   );
 };
 
-const Tenders = ({ onView, onAdd, onBack }) => {
-  const [tenders, setTenders] = useState(mockTenders);
-  const [loading, setLoading] = useState(false);
+const Tenders = ({ onView, onEdit, onAdd, onBack }) => {
+  const [tenders, setTenders] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     const fetchTenders = async () => {
       try {
-        const response = await axios.get(`${API_BASE_URL}/tenders/`);
-        if (response.data && response.data.length > 0) {
-          // Map backend data if necessary, adding a dummy status for UI
-          const mappedData = response.data.map(t => ({
-            ...t,
-            status: t.status || 'Draft' // Backend model doesn't have status yet
-          }));
-          setTenders(mappedData);
-        }
+        const response = await axios.get(`${API_BASE_URL}/tenders`);
+        setTenders(response.data);
       } catch (err) {
-        console.error("Failed to fetch real tenders, staying with mock data.", err);
+        console.error("Failed to fetch real tenders.", err);
+      } finally {
+        setLoading(false);
       }
     };
     fetchTenders();
   }, []);
 
-  const filteredTenders = tenders.filter(t => 
-    t.tender_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    t.title.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const handleDelete = async (tenderId) => {
+    if (window.confirm('Are you sure you want to delete this tender?')) {
+      try {
+        await axios.delete(`${API_BASE_URL}/tenders/${tenderId}`);
+        setTenders(prev => prev.filter(t => t.tenderId !== tenderId));
+      } catch (err) {
+        console.error("Failed to delete tender:", err);
+        alert("Failed to delete tender.");
+      }
+    }
+  };
+
+  const filteredTenders = (tenders || []).filter(t => {
+    const search = searchTerm.toLowerCase();
+    const idMatch = (t.tenderId || "").toLowerCase().includes(search);
+    const titleMatch = (t.title || "").toLowerCase().includes(search);
+    return idMatch || titleMatch;
+  });
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-[#fcfcfd]">
-      <div className="p-10 max-w-[1600px] mx-auto w-full">
+      <div className="flex-1 overflow-y-auto p-6 md:p-10 custom-scrollbar">
+        <div className="max-w-[1600px] mx-auto w-full">
         {/* Breadcrumbs */}
         <div className="flex items-center space-x-2 text-xs font-bold text-slate-400 mb-6 uppercase tracking-wider">
           <button onClick={onBack} className="hover:text-slate-900 transition-colors">Dashboard</button>
@@ -123,63 +125,84 @@ const Tenders = ({ onView, onAdd, onBack }) => {
             <h3 className="font-black text-slate-900 uppercase tracking-tight text-sm">All Tenders</h3>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-slate-50/50">
-                  <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Tender ID</th>
-                  <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Title</th>
-                  <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest text-center">Type</th>
-                  <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Department</th>
-                  <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest text-center">Status</th>
-                  <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Publish Date</th>
-                  <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Deadline</th>
-                  <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filteredTenders.map((tender) => (
-                  <tr key={tender.id} className="hover:bg-slate-50/50 transition-colors group">
-                    <td className="px-6 py-5">
-                      <span className="text-sm font-bold text-slate-900">{tender.tender_id}</span>
-                    </td>
-                    <td className="px-6 py-5">
-                      <span className="text-sm font-bold text-slate-600 group-hover:text-slate-900 transition-colors line-clamp-1">{tender.title}</span>
-                    </td>
-                    <td className="px-6 py-5 text-center">
-                      <span className="px-2 py-1 bg-slate-100 rounded text-[10px] font-black text-slate-500 uppercase">{tender.tender_type}</span>
-                    </td>
-                    <td className="px-6 py-5">
-                      <span className="text-sm font-bold text-slate-500">{tender.organization}</span>
-                    </td>
-                    <td className="px-6 py-5 text-center">
-                      <StatusBadge status={tender.status} />
-                    </td>
-                    <td className="px-6 py-5">
-                      <span className="text-sm font-bold text-slate-400">{tender.date_of_publish}</span>
-                    </td>
-                    <td className="px-6 py-5">
-                      <span className="text-sm font-bold text-slate-400">{tender.date_of_closing}</span>
-                    </td>
-                    <td className="px-6 py-5 text-right">
-                      <div className="flex items-center justify-end space-x-2">
-                        <button 
-                          onClick={() => onView(tender)}
-                          className="p-2 text-slate-400 hover:text-slate-900 hover:bg-white rounded-lg transition-all"
-                        >
-                          <Eye size={16} />
-                        </button>
-                        <button className="p-2 text-slate-400 hover:text-slate-900 hover:bg-white rounded-lg transition-all">
-                          <Edit3 size={16} />
-                        </button>
-                        <button className="p-2 text-slate-400 hover:text-slate-900 hover:bg-white rounded-lg transition-all">
-                          <FileText size={16} />
-                        </button>
-                      </div>
-                    </td>
+            {loading ? (
+              <div className="flex flex-col items-center justify-center py-20 space-y-4">
+                <div className="w-10 h-10 border-4 border-slate-200 border-t-emerald-600 rounded-full animate-spin" />
+                <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Loading Tenders...</p>
+              </div>
+            ) : filteredTenders.length === 0 ? (
+              <div className="py-20 text-center">
+                <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                  <FileText className="w-8 h-8 text-slate-200" />
+                </div>
+                <h4 className="text-lg font-black text-slate-900 mb-2">No Tenders Found</h4>
+                <p className="text-sm font-medium text-slate-400">Add your first tender to get started with AI extraction.</p>
+              </div>
+            ) : (
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50/50">
+                    <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Tender ID</th>
+                    <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Title</th>
+                    <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest text-center">Type</th>
+                    <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Department</th>
+                    <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest text-center">Status</th>
+                    <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Publish Date</th>
+                    <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Deadline</th>
+                    <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filteredTenders.map((tender) => (
+                    <tr key={tender._id} className="hover:bg-slate-50/50 transition-colors group">
+                      <td className="px-6 py-5">
+                        <span className="text-sm font-bold text-slate-900">{tender.tenderId}</span>
+                      </td>
+                      <td className="px-6 py-5">
+                        <span className="text-sm font-bold text-slate-600 group-hover:text-slate-900 transition-colors line-clamp-1">{tender.title}</span>
+                      </td>
+                      <td className="px-6 py-5 text-center">
+                        <span className="px-2 py-1 bg-slate-100 rounded text-[10px] font-black text-slate-500 uppercase">{tender.tenderType}</span>
+                      </td>
+                      <td className="px-6 py-5">
+                        <span className="text-sm font-bold text-slate-500">{tender.department}</span>
+                      </td>
+                      <td className="px-6 py-5 text-center">
+                        <StatusBadge status={tender.status || 'Draft'} />
+                      </td>
+                      <td className="px-6 py-5">
+                        <span className="text-sm font-bold text-slate-400">{tender.publishedDate ? new Date(tender.publishedDate).toLocaleDateString() : 'N/A'}</span>
+                      </td>
+                      <td className="px-6 py-5">
+                        <span className="text-sm font-bold text-slate-400">{tender.closingDate ? new Date(tender.closingDate).toLocaleDateString() : 'N/A'}</span>
+                      </td>
+                      <td className="px-6 py-5 text-right">
+                        <div className="flex items-center justify-end space-x-2">
+                          <button 
+                            onClick={() => onView(tender)}
+                            className="p-2 text-slate-400 hover:text-slate-900 hover:bg-white rounded-lg transition-all"
+                          >
+                            <Eye size={16} />
+                          </button>
+                          <button 
+                            onClick={() => onEdit(tender)}
+                            className="p-2 text-slate-400 hover:text-slate-900 hover:bg-white rounded-lg transition-all"
+                          >
+                            <Edit3 size={16} />
+                          </button>
+                          <button 
+                            onClick={() => handleDelete(tender.tenderId)}
+                            className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
           <div className="p-6 border-t border-slate-100 bg-slate-50/30">
             <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
@@ -189,7 +212,8 @@ const Tenders = ({ onView, onAdd, onBack }) => {
         </div>
       </div>
     </div>
-  );
+  </div>
+);
 };
 
 export default Tenders;

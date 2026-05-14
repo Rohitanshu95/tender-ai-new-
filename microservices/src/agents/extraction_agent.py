@@ -8,6 +8,7 @@ from src.prompts.tender_prompts import (
     get_template_system_message,
     TEMPLATE_HUMAN_MESSAGE
 )
+from pydantic import BaseModel, create_model
 
 def extract_tender_info(rfp_paths: list[str], corr_paths: list[str] = []) -> TenderData:
     """
@@ -56,7 +57,6 @@ def generate_template(rfp_paths: list[str], template_type: str) -> list[Requirem
     llm = get_llm()
     
     # We define a wrapper for list output
-    from pydantic import create_model
     RequirementList = create_model("RequirementList", requirements=(list[Requirement], ...))
     structured_llm = llm.with_structured_output(RequirementList)
 
@@ -73,4 +73,43 @@ def generate_template(rfp_paths: list[str], template_type: str) -> list[Requirem
         "text": truncated_text,
         "template_type": template_type.upper()
     })
+    return result.requirements
+
+def sync_requirements(documents: list, tender_id: str) -> list:
+    """
+    Reconciles RFP and multiple Corrigenda to provide the latest requirements.
+    """
+    combined_context = f"Tender ID: {tender_id}\n\n"
+    
+    # Order documents by version to ensure correct precedence in prompt
+    sorted_docs = sorted(documents, key=lambda x: x.version)
+    
+    for doc in sorted_docs:
+        combined_context += f"\n--- DOCUMENT START: {doc.type} (ID: {doc.id}, Version: {doc.version}) ---\n"
+        combined_context += get_document_text(doc.path)
+        combined_context += f"\n--- DOCUMENT END: {doc.type} ---\n"
+
+    llm = get_llm()
+    
+    # Define a simple requirement structure for syncing
+    class SyncReqItem(BaseModel):
+        category: str
+        key: str
+        value: str
+        sourceDocId: str # AI should tell us which doc version this info came from
+        
+    SyncReqList = create_model("SyncReqList", requirements=(list[SyncReqItem], ...))
+    structured_llm = llm.with_structured_output(SyncReqList)
+
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", "You are an expert procurement agent. Extract a unified list of PQ and TQ requirements. "
+                   "If a Corrigendum updates an RFP field, use the latest information. "
+                   "For each requirement, identify which 'Document ID' was the source. "
+                   "Categories should be 'PQ' or 'TQ'."),
+        ("human", "Here are the tender documents:\n\n{context}\n\nPlease provide a reconciled list of requirements.")
+    ])
+
+    chain = prompt | structured_llm
+    result = chain.invoke({"context": combined_context[:100000]}) # High context limit
+    
     return result.requirements

@@ -28,7 +28,7 @@ const Sidebar = ({ activeTab, onTabChange }) => {
     <motion.aside
       initial={false}
       animate={{ width: isCollapsed ? 80 : 320 }}
-      className="bg-white border-r border-slate-200 flex flex-col relative z-20 h-screen transition-all duration-300 ease-in-out"
+      className="bg-white border-r border-slate-200 flex flex-col relative z-20 h-full transition-all duration-300 ease-in-out"
     >
       {/* Toggle Button */}
       <button

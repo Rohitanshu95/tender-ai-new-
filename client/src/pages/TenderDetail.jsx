@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { 
   ChevronRight, Settings, Download, Building2, IndianRupee, 
   Calendar, Clock, FileText, LayoutList, Layers, ClipboardCheck
@@ -20,20 +21,44 @@ const InfoCard = ({ icon: Icon, label, value, colorClass, iconBg }) => (
 
 const TenderDetail = ({ tender = {}, onBack }) => {
   const [activeTab, setActiveTab] = useState('overview');
+  const [documents, setDocuments] = useState([]);
+  const [requirements, setRequirements] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  // Use passed tender data or fallback to the specific one in the image
-  const data = tender.id ? tender : {
-    tender_id: 'TND-2026-001',
+  // Use passed tender data or fallback
+  const data = tender.tenderId ? tender : {
+    tenderId: 'TND-2026-001',
     title: 'Road Construction - Phase 2',
     status: 'Published',
-    organization: 'Public Works',
-    estimated_value: '₹12,50,00,000',
-    date_of_publish: '2026-03-15',
-    date_of_closing: '2026-04-15',
+    department: 'Public Works',
+    estimatedValue: '₹12,50,00,000',
+    publishedDate: '2026-03-15',
+    closingDate: '2026-04-15',
     description: 'Construction of 45 km rural roads with proper drainage systems connecting 12 villages in Khordha district.',
     scope: 'The project includes road construction, drainage systems, signage installation, and quality certification as per IRC standards.',
-    type: 'RFP'
+    tenderType: 'RFP'
   };
+
+  useEffect(() => {
+    if (data.tenderId) {
+      const fetchData = async () => {
+        setLoading(true);
+        try {
+          const [docsRes, reqsRes] = await Promise.all([
+            axios.get(`http://localhost:5001/api/tenders/${data.tenderId}/documents`),
+            axios.get(`http://localhost:5001/api/tenders/${data.tenderId}/requirements`)
+          ]);
+          setDocuments(docsRes.data);
+          setRequirements(reqsRes.data);
+        } catch (err) {
+          console.error("Failed to fetch tender details", err);
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchData();
+    }
+  }, [data.tenderId]);
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: LayoutList },
@@ -51,14 +76,14 @@ const TenderDetail = ({ tender = {}, onBack }) => {
           <ChevronRight size={12} />
           <button onClick={onBack} className="hover:text-slate-900 transition-colors">Tenders</button>
           <ChevronRight size={12} />
-          <span className="text-slate-600">{data.tender_id}</span>
+          <span className="text-slate-600">{data.tenderId}</span>
         </div>
 
         {/* Header Section */}
         <div className="flex items-start justify-between mb-10">
           <div>
             <div className="flex items-center space-x-3 mb-2">
-              <h1 className="text-4xl font-black text-slate-900 tracking-tighter">{data.tender_id}</h1>
+              <h1 className="text-4xl font-black text-slate-900 tracking-tighter">{data.tenderId}</h1>
               <span className="px-3 py-1 bg-blue-50 text-blue-600 border border-blue-100 rounded-full text-[11px] font-bold">
                 {data.status}
               </span>
@@ -66,13 +91,9 @@ const TenderDetail = ({ tender = {}, onBack }) => {
             <p className="text-slate-500 text-lg font-medium tracking-tight">{data.title}</p>
           </div>
           <div className="flex items-center space-x-3">
-            <button className="flex items-center space-x-2 px-5 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold hover:bg-slate-50 transition-all">
-              <Settings size={18} />
-              <span>Configure Template</span>
-            </button>
             <button className="flex items-center space-x-2 px-5 py-2.5 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-500 shadow-xl shadow-emerald-100 transition-all">
               <Download size={18} />
-              <span>Download All</span>
+              <span>Download Documents</span>
             </button>
           </div>
         </div>
@@ -82,28 +103,28 @@ const TenderDetail = ({ tender = {}, onBack }) => {
           <InfoCard 
             icon={Building2} 
             label="Department" 
-            value={data.organization} 
+            value={data.department} 
             iconBg="bg-orange-50" 
             colorClass="text-orange-500" 
           />
           <InfoCard 
             icon={IndianRupee} 
             label="Estimated Value" 
-            value={data.estimated_value || '₹12,50,00,000'} 
+            value={data.estimatedValue || '₹12,50,00,000'} 
             iconBg="bg-emerald-50" 
             colorClass="text-emerald-500" 
           />
           <InfoCard 
             icon={Calendar} 
             label="Publish Date" 
-            value={data.date_of_publish} 
+            value={data.publishedDate ? new Date(data.publishedDate).toLocaleDateString() : 'N/A'} 
             iconBg="bg-blue-50" 
             colorClass="text-blue-500" 
           />
           <InfoCard 
             icon={Clock} 
             label="Deadline" 
-            value={data.date_of_closing} 
+            value={data.closingDate ? new Date(data.closingDate).toLocaleDateString() : 'N/A'} 
             iconBg="bg-rose-50" 
             colorClass="text-rose-500" 
           />
@@ -136,34 +157,174 @@ const TenderDetail = ({ tender = {}, onBack }) => {
           className="bg-white rounded-[2.5rem] border border-slate-100 p-10 shadow-sm"
         >
           {activeTab === 'overview' && (
-            <div className="space-y-10">
-              <section>
-                <h3 className="text-sm font-black text-slate-400 uppercase tracking-[0.2em] mb-6">Tender Overview</h3>
-                <div className="space-y-8">
-                  <div>
-                    <h4 className="text-lg font-black text-slate-900 mb-3 tracking-tight">Description</h4>
-                    <p className="text-slate-600 font-medium leading-relaxed max-w-4xl">
-                      {data.description}
-                    </p>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+              <div className="lg:col-span-2 space-y-10">
+                <section>
+                  <h3 className="text-sm font-black text-slate-400 uppercase tracking-[0.2em] mb-6">Original Tender Data</h3>
+                  <div className="space-y-8">
+                    <div>
+                      <h4 className="text-lg font-black text-slate-900 mb-3 tracking-tight">Project Title</h4>
+                      <p className="text-slate-600 font-medium leading-relaxed max-w-4xl text-xl">
+                        {data.title}
+                      </p>
+                    </div>
+                    <div>
+                      <h4 className="text-lg font-black text-slate-900 mb-3 tracking-tight">Extracted Scope</h4>
+                      <p className="text-slate-600 font-medium leading-relaxed max-w-4xl">
+                        {data.description || "The document defines the project scope as per the provided RFP/RFQ specifications. Detailed technical requirements can be found in the Specifications tab."}
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-8 pt-4">
+                      <div>
+                        <h4 className="text-xs font-black text-slate-400 uppercase mb-2 tracking-widest">Authority</h4>
+                        <p className="text-sm font-bold text-slate-700">{data.organization || "National Procurement Board"}</p>
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-black text-slate-400 uppercase mb-2 tracking-widest">Tender Type</h4>
+                        <span className="inline-block px-3 py-1 bg-slate-100 text-slate-500 rounded-md text-[10px] font-black uppercase tracking-widest">
+                          {data.tenderType || 'RFP'}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="text-lg font-black text-slate-900 mb-3 tracking-tight">Scope of Work</h4>
-                    <p className="text-slate-600 font-medium leading-relaxed max-w-4xl">
-                      {data.scope}
-                    </p>
-                  </div>
-                  <div>
-                    <h4 className="text-lg font-black text-slate-900 mb-3 tracking-tight">Type</h4>
-                    <span className="inline-block px-3 py-1 bg-slate-50 text-slate-500 border border-slate-100 rounded text-xs font-black uppercase">
-                      {data.type || 'RFP'}
-                    </span>
+                </section>
+              </div>
+
+              <div className="space-y-6">
+                <div className="p-8 bg-slate-50 rounded-[2rem] border border-slate-100">
+                  <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-6">Timeline Status</h3>
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-tight">Published</span>
+                      </div>
+                      <span className="text-xs font-black text-slate-900">{data.publishedDate ? new Date(data.publishedDate).toLocaleDateString() : 'N/A'}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-tight">Closing</span>
+                      </div>
+                      <span className="text-xs font-black text-slate-900">{data.closingDate ? new Date(data.closingDate).toLocaleDateString() : 'N/A'}</span>
+                    </div>
+                    <div className="pt-4 border-t border-slate-200">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-black text-slate-400 uppercase">Current Status</span>
+                        <span className="px-3 py-1 bg-blue-600 text-white rounded-full text-[10px] font-black uppercase">
+                          {data.status}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </section>
+
+                <div className="p-8 bg-emerald-900 rounded-[2rem] text-white">
+                  <div className="flex items-center space-x-3 mb-4">
+                    <ClipboardCheck className="text-emerald-400" size={20} />
+                    <span className="text-[10px] font-black uppercase tracking-widest">Extraction Pulse</span>
+                  </div>
+                  <p className="text-xs text-emerald-100 font-medium leading-relaxed mb-6">
+                    This tender has been processed with 100% accuracy based on the uploaded RFP and Corrigendum documents.
+                  </p>
+                  <button className="w-full py-3 bg-emerald-500 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-400 transition-all">
+                    View Audit Log
+                  </button>
+                </div>
+              </div>
             </div>
           )}
           
-          {activeTab !== 'overview' && (
+          {activeTab === 'specifications' && (
+            <div className="space-y-8">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-black text-slate-400 uppercase tracking-[0.2em]">Extraction Results</h3>
+                <span className="text-[10px] font-bold text-slate-400 uppercase bg-slate-50 px-2 py-1 rounded">
+                  {requirements.length} Requirements Identified
+                </span>
+              </div>
+              
+              {loading ? (
+                <div className="py-20 flex justify-center"><div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" /></div>
+              ) : requirements.length === 0 ? (
+                <div className="py-20 text-center border-2 border-dashed border-slate-100 rounded-3xl text-slate-300">
+                  <Layers size={40} className="mx-auto mb-4 opacity-20" />
+                  <p className="text-xs font-bold uppercase tracking-widest">No specifications found</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {['PQ', 'TQ', 'Compliance', 'Financials'].map(cat => {
+                    const catReqs = requirements.filter(r => r.category === cat);
+                    if (catReqs.length === 0) return null;
+                    return (
+                      <div key={cat} className="space-y-3">
+                        <div className="flex items-center space-x-3">
+                          <div className="h-px flex-1 bg-slate-100" />
+                          <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">{cat} Matrix</span>
+                          <div className="h-px flex-1 bg-slate-100" />
+                        </div>
+                        <div className="grid grid-cols-1 gap-3">
+                          {catReqs.map((req, idx) => (
+                            <div key={idx} className="p-5 bg-white border border-slate-100 rounded-2xl flex items-start space-x-4 hover:border-emerald-100 transition-all">
+                              <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg shrink-0">
+                                <ClipboardCheck size={16} />
+                              </div>
+                              <div className="flex-1">
+                                <h5 className="text-sm font-black text-slate-900 mb-1">{req.key}</h5>
+                                <p className="text-xs font-medium text-slate-500 leading-relaxed">{req.value}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'documents' && (
+            <div className="space-y-6">
+              <h3 className="text-sm font-black text-slate-400 uppercase tracking-[0.2em]">Tender Documents</h3>
+              {loading ? (
+                <div className="py-12 flex justify-center">
+                  <div className="w-8 h-8 border-4 border-slate-200 border-t-emerald-600 rounded-full animate-spin" />
+                </div>
+              ) : documents.length === 0 ? (
+                <div className="py-20 text-center border-2 border-dashed border-slate-100 rounded-3xl">
+                  <FileText className="w-12 h-12 text-slate-200 mx-auto mb-4" />
+                  <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">No Documents Found</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {documents.map((doc, idx) => (
+                    <div key={idx} className="p-6 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-between group hover:border-emerald-200 transition-all">
+                      <div className="flex items-center space-x-4">
+                        <div className="p-3 bg-white rounded-xl shadow-sm">
+                          <FileText className="w-5 h-5 text-slate-400 group-hover:text-emerald-500 transition-colors" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-black text-slate-900">{doc.name}</p>
+                          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Version {doc.version} • {doc.type}</p>
+                        </div>
+                      </div>
+                      <a 
+                        href={`http://localhost:5001/${doc.filePath}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="p-2 hover:bg-white rounded-lg text-slate-400 hover:text-emerald-600 transition-all"
+                      >
+                        <Download size={18} />
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab !== 'overview' && activeTab !== 'documents' && activeTab !== 'specifications' && (
             <div className="flex flex-col items-center justify-center py-20 text-slate-300">
               <FileText size={48} className="mb-4 opacity-20" />
               <p className="font-bold uppercase tracking-widest text-xs">Section Content Pending</p>
