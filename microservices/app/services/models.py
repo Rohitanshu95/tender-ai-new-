@@ -22,6 +22,7 @@ class TenderData(BaseModel):
     id: Optional[int] = None
     tender_id: Optional[str] = Field(None, description="Tender ID / Reference No")
     tender_type: Optional[str] = Field(None, description="Tender Type (RFP, RFQ, or EoI)")
+    estimated_value: Optional[str] = Field(None, description="Estimated Value of the Project / Tender Value")
     evaluation_type: Optional[str] = Field(None, description="Evaluation Type (L1, QCBS, etc.)")
     title: Optional[str] = Field(None, description="Title of the tender")
     organization: Optional[str] = Field(None, description="Organization name")

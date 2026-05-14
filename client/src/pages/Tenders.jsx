@@ -15,7 +15,7 @@ const StatusBadge = ({ status }) => {
   };
   
   return (
-    <span className={`px-3 py-1 rounded-full text-[11px] font-bold border ${styles[status] || styles.Draft}`}>
+    <span className={`px-3 py-1 rounded-full text-[10px] font-semibold border whitespace-nowrap ${styles[status] || styles.Draft}`}>
       {status}
     </span>
   );
@@ -43,7 +43,7 @@ const Tenders = ({ onView, onEdit, onAdd, onBack }) => {
   const handleDelete = async (tenderId) => {
     if (window.confirm('Are you sure you want to delete this tender?')) {
       try {
-        await axios.delete(`${API_BASE_URL}/tenders/${tenderId}`);
+        await axios.delete(`${API_BASE_URL}/tenders/${encodeURIComponent(tenderId)}`);
         setTenders(prev => prev.filter(t => t.tenderId !== tenderId));
       } catch (err) {
         console.error("Failed to delete tender:", err);
@@ -80,15 +80,15 @@ const Tenders = ({ onView, onEdit, onAdd, onBack }) => {
               <ArrowLeft size={18} />
             </button>
             <div>
-              <h1 className="text-4xl font-black text-slate-900 tracking-tighter mb-2">Tenders</h1>
-              <p className="text-slate-500 font-medium">Manage all tender documents and processes</p>
+              <h1 className="text-4xl font-semibold text-slate-700 tracking-tight mb-2">Tenders</h1>
+              <p className="text-slate-500 font-normal italic">Manage and track your procurement documentation lifecycle</p>
             </div>
           </div>
           <button 
             onClick={onAdd}
-            className="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3.5 rounded-xl font-black shadow-xl shadow-emerald-100 transition-all active:scale-95 flex items-center space-x-2"
+            className="bg-orange-600 hover:bg-orange-500 text-white px-6 py-3.5 rounded-xl font-semibold shadow-xl shadow-orange-100 transition-all active:scale-95 flex items-center space-x-2"
           >
-            <Plus size={20} strokeWidth={3} />
+            <Plus size={20} strokeWidth={2} />
             <span>Add New Tender</span>
           </button>
         </div>
@@ -101,13 +101,13 @@ const Tenders = ({ onView, onEdit, onAdd, onBack }) => {
               <input 
                 type="text" 
                 placeholder="Search by Tender ID or Title..." 
-                className="w-full pl-12 pr-4 py-3 bg-slate-50 border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-slate-900 transition-all"
+                className="w-full pl-12 pr-4 py-3 bg-slate-50 border-none rounded-2xl text-sm font-semibold focus:ring-2 focus:ring-orange-500 transition-all outline-none"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
             <div className="w-64 relative">
-              <select className="w-full appearance-none pl-4 pr-10 py-3 bg-slate-50 border-none rounded-2xl text-sm font-bold text-slate-600 focus:ring-2 focus:ring-slate-900 cursor-pointer transition-all">
+              <select className="w-full appearance-none pl-4 pr-10 py-3 bg-slate-50 border-none rounded-2xl text-sm font-semibold text-slate-600 focus:ring-2 focus:ring-orange-500 cursor-pointer transition-all outline-none">
                 <option>All Statuses</option>
                 <option>In Evaluation</option>
                 <option>Published</option>
@@ -122,7 +122,7 @@ const Tenders = ({ onView, onEdit, onAdd, onBack }) => {
         {/* Table Container */}
         <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden">
           <div className="p-6 border-b border-slate-100 bg-white">
-            <h3 className="font-black text-slate-900 uppercase tracking-tight text-sm">All Tenders</h3>
+            <h3 className="font-semibold text-slate-400 uppercase tracking-widest text-[10px]">All Tenders</h3>
           </div>
           <div className="overflow-x-auto">
             {loading ? (
@@ -142,39 +142,39 @@ const Tenders = ({ onView, onEdit, onAdd, onBack }) => {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50/50">
-                    <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Tender ID</th>
-                    <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Title</th>
-                    <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest text-center">Type</th>
-                    <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Department</th>
-                    <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest text-center">Status</th>
-                    <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Publish Date</th>
-                    <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Deadline</th>
-                    <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
+                    <th className="px-6 py-4 text-[11px] font-semibold text-slate-400 uppercase tracking-widest">Tender ID</th>
+                    <th className="px-6 py-4 text-[11px] font-semibold text-slate-400 uppercase tracking-widest">Title</th>
+                    <th className="px-6 py-4 text-[11px] font-semibold text-slate-400 uppercase tracking-widest text-center">Type</th>
+                    <th className="px-6 py-4 text-[11px] font-semibold text-slate-400 uppercase tracking-widest">Department</th>
+                    <th className="px-6 py-4 text-[11px] font-semibold text-slate-400 uppercase tracking-widest text-center">Status</th>
+                    <th className="px-6 py-4 text-[11px] font-semibold text-slate-400 uppercase tracking-widest">Publish Date</th>
+                    <th className="px-6 py-4 text-[11px] font-semibold text-slate-400 uppercase tracking-widest">Deadline</th>
+                    <th className="px-6 py-4 text-[11px] font-semibold text-slate-400 uppercase tracking-widest text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {filteredTenders.map((tender) => (
-                    <tr key={tender._id} className="hover:bg-slate-50/50 transition-colors group">
+                    <tr key={tender._id} className="hover:bg-slate-50/50 transition-colors group border-b border-slate-50 last:border-0">
                       <td className="px-6 py-5">
-                        <span className="text-sm font-bold text-slate-900">{tender.tenderId}</span>
+                        <span className="text-sm font-semibold text-slate-700">{tender.tenderId}</span>
                       </td>
                       <td className="px-6 py-5">
-                        <span className="text-sm font-bold text-slate-600 group-hover:text-slate-900 transition-colors line-clamp-1">{tender.title}</span>
+                        <span className="text-sm font-medium text-slate-600 group-hover:text-orange-600 transition-colors line-clamp-1">{tender.title}</span>
                       </td>
                       <td className="px-6 py-5 text-center">
-                        <span className="px-2 py-1 bg-slate-100 rounded text-[10px] font-black text-slate-500 uppercase">{tender.tenderType}</span>
+                        <span className="px-2 py-1 bg-slate-100 rounded text-[10px] font-semibold text-slate-500 uppercase">{tender.tenderType}</span>
                       </td>
                       <td className="px-6 py-5">
-                        <span className="text-sm font-bold text-slate-500">{tender.department}</span>
+                        <span className="text-sm font-medium text-slate-500">{tender.department}</span>
                       </td>
                       <td className="px-6 py-5 text-center">
                         <StatusBadge status={tender.status || 'Draft'} />
                       </td>
                       <td className="px-6 py-5">
-                        <span className="text-sm font-bold text-slate-400">{tender.publishedDate ? new Date(tender.publishedDate).toLocaleDateString() : 'N/A'}</span>
+                        <span className="text-sm font-medium text-slate-400">{tender.publishedDate ? new Date(tender.publishedDate).toLocaleDateString() : 'N/A'}</span>
                       </td>
                       <td className="px-6 py-5">
-                        <span className="text-sm font-bold text-slate-400">{tender.closingDate ? new Date(tender.closingDate).toLocaleDateString() : 'N/A'}</span>
+                        <span className="text-sm font-medium text-slate-400">{tender.closingDate ? new Date(tender.closingDate).toLocaleDateString() : 'N/A'}</span>
                       </td>
                       <td className="px-6 py-5 text-right">
                         <div className="flex items-center justify-end space-x-2">
@@ -204,8 +204,8 @@ const Tenders = ({ onView, onEdit, onAdd, onBack }) => {
               </table>
             )}
           </div>
-          <div className="p-6 border-t border-slate-100 bg-slate-50/30">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+          <div className="p-6 border-t border-slate-50 bg-slate-50/30">
+            <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-[0.2em]">
               Showing {filteredTenders.length} of {tenders.length} tenders
             </span>
           </div>

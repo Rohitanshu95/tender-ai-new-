@@ -6,7 +6,8 @@ EXTRACTION_SYSTEM_MESSAGE = (
     "You must track the timeline of these updates and ensure the final values reflect the most recent information provided across ALL documents. "
     "Always favor information in 'CORRIGENDUM UPDATES' sections over the 'MAIN RFP' section.\n\n"
     "FOR TENDER TYPE: Classify as 'RFP', 'RFQ', or 'EOI'.\n"
-    "FOR DEPARTMENT: Classify as 'Public Works', 'IT & Electronics', or 'Education' based on the content if not explicitly stated."
+    "FOR DEPARTMENT: Classify as 'Public Works', 'IT & Electronics', or 'Education' based on the content if not explicitly stated.\n"
+    "FOR ESTIMATED VALUE: Extract the project cost or tender value (e.g., 'Rs. 50,00,000' or '$1.2M')."
 )
 
 EXTRACTION_HUMAN_MESSAGE = (

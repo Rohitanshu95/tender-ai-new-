@@ -2,10 +2,10 @@ import mongoose from 'mongoose';
 
 const requirementSchema = new mongoose.Schema({
     tenderId: { type: String, required: true },
-    category: { type: String, enum: ['PQ', 'TQ', 'COMMERCIAL'], required: true },
+    category: { type: String, required: true },
     key: { type: String, required: true },
-    value: { type: String, required: true },
-    sourceDocId: { type: mongoose.Schema.Types.ObjectId, ref: 'Document' },
+    value: { type: String },
+    sourceDocId: { type: String },
     isSuperseded: { type: Boolean, default: false },
     lastUpdated: { type: Date, default: Date.now }
 });

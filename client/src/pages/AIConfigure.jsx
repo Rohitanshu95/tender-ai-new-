@@ -30,7 +30,7 @@ const AIConfigure = ({ onView, onBack, onGenerate }) => {
   );
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden bg-[#fcfcfd]">
+    <div className="flex-1 flex flex-col overflow-y-auto bg-[#fcfcfd] custom-scrollbar">
       <div className="p-10 max-w-[1600px] mx-auto w-full">
         {/* Breadcrumbs */}
         <div className="flex items-center space-x-2 text-xs font-bold text-slate-400 mb-6 uppercase tracking-wider">

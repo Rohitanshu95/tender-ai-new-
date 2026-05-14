@@ -7,15 +7,15 @@ export const createTender = async (req, res) => {
     console.log("Creating/Updating Tender Payload:", req.body);
     try {
         const { 
-            tenderId, title, organization, department, tenderType, 
+            tenderId, title, organization, department, tenderType, estimatedValue,
             status, publishedDate, closingDate, requirements 
         } = req.body;
 
         // Ensure dates are valid or null
         const parseDate = (dateStr) => {
             if (!dateStr) return null;
-            // Handle DD-MM-YYYY
-            const ddmmyyyy = /^(\d{1,2})-(\d{1,2})-(\d{4})$/;
+            // Handle DD-MM-YYYY or DD/MM/YYYY
+            const ddmmyyyy = /^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/;
             const match = dateStr.match(ddmmyyyy);
             if (match) {
                 return new Date(`${match[3]}-${match[2]}-${match[1]}`);
@@ -36,6 +36,7 @@ export const createTender = async (req, res) => {
                 organization: organization || "Unknown Authority", 
                 department: department || "General", 
                 tenderType: (tenderType || "RFP").toUpperCase(), 
+                estimatedValue: estimatedValue || "N/A",
                 status: status || "In Evaluation", 
                 publishedDate: pDate, 
                 closingDate: cDate,
@@ -66,8 +67,16 @@ export const createTender = async (req, res) => {
             tender 
         });
     } catch (error) {
-        console.error("Create tender error:", error);
-        res.status(500).json({ message: error.message });
+        console.error("CRITICAL: Create tender failure!");
+        console.error("Error Name:", error.name);
+        console.error("Error Message:", error.message);
+        if (error.errors) {
+            console.error("Validation Errors:", Object.keys(error.errors).map(k => `${k}: ${error.errors[k].message}`));
+        }
+        res.status(500).json({ 
+            message: error.message,
+            details: error.errors ? Object.keys(error.errors) : null
+        });
     }
 };
 
@@ -160,7 +169,10 @@ export const batchExtract = async (req, res) => {
         const results = await Promise.all(extractionPromises);
         
         const output = {
-            general: results.find(r => r.agent === 'general').data.data,
+            general: {
+                ...results.find(r => r.agent === 'general').data.data,
+                estimated_value: results.find(r => r.agent === 'general').data.data.estimated_value || "N/A"
+            },
             pq: results.find(r => r.agent === 'pq').data.requirements,
             tq: results.find(r => r.agent === 'tq').data.requirements
         };

@@ -14,7 +14,7 @@ const AddTender = ({ onBack, editTender = null }) => {
     if (isEditMode) {
       const fetchRequirements = async () => {
         try {
-          const res = await axios.get(`http://localhost:5001/api/tenders/${editTender.tenderId}/requirements`);
+          const res = await axios.get(`http://localhost:5001/api/tenders/${encodeURIComponent(editTender.tenderId)}/requirements`);
           const reqs = res.data;
           
           setInitialExtractions({
@@ -43,6 +43,7 @@ const AddTender = ({ onBack, editTender = null }) => {
         organization: meta.organization || meta.authority || "National Procurement Board",
         department: meta.department || "Public Works",
         tenderType: (meta.tender_type || meta.type || "RFP").toUpperCase(),
+        estimatedValue: meta.estimated_value || "N/A",
         status: "In Evaluation",
         publishedDate: meta.date_of_publish || new Date().toISOString(),
         closingDate: meta.date_of_closing || new Date().toISOString(),
@@ -58,7 +59,8 @@ const AddTender = ({ onBack, editTender = null }) => {
       onBack(); // Go back to tenders list after success
     } catch (err) {
       console.error("Failed to save tender:", err);
-      alert("Error saving tender. Please check if backend is running.");
+      const serverMsg = err.response?.data?.message || err.message;
+      alert(`Error saving tender: ${serverMsg}. Please check if backend is running.`);
     } finally {
       setIsSaving(false);
     }

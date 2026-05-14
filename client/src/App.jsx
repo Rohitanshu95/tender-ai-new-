@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, ChevronRight, ShieldCheck, BarChart4 } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import AIConfigure from './pages/AIConfigure';
 import Tenders from './pages/Tenders';
@@ -19,7 +19,7 @@ const Dashboard = ({ onBack }) => (
         <span className="text-slate-600">Overview</span>
       </div>
       <div className="mb-10">
-        <h1 className="text-4xl font-black text-slate-900 tracking-tighter">System Dashboard</h1>
+        <h1 className="text-4xl font-semibold text-slate-700 tracking-tight">System Dashboard</h1>
       </div>
       <div className="p-12 border-2 border-dashed border-slate-200 rounded-[3rem] text-center text-slate-400 font-bold">
         Analytics and overview metrics will appear here.
@@ -40,7 +40,7 @@ const Evaluations = ({ onBack, onStartPQ, onStartTQ }) => (
         <button onClick={onBack} className="p-2.5 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-slate-900 transition-all shadow-sm">
           <ArrowLeft size={18} />
         </button>
-        <h1 className="text-4xl font-black text-slate-900 tracking-tighter">Evaluations</h1>
+        <h1 className="text-4xl font-semibold text-slate-700 tracking-tight">Evaluations</h1>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -84,7 +84,7 @@ const Reports = ({ onBack }) => (
         <button onClick={onBack} className="p-2.5 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-slate-900 transition-all shadow-sm">
           <ArrowLeft size={18} />
         </button>
-        <h1 className="text-4xl font-black text-slate-900 tracking-tighter">System Reports</h1>
+        <h1 className="text-4xl font-semibold text-slate-700 tracking-tight">System Reports</h1>
       </div>
       <div className="p-12 border-2 border-dashed border-slate-200 rounded-[3rem] text-center text-slate-400 font-bold">
         Export extraction results and audits here.

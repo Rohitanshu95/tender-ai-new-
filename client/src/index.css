@@ -1,19 +1,53 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans:wght@300;400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --color-brand-emerald: #10b981;
-  --color-brand-slate: #0f172a;
+  --color-gov-orange: #f97316; /* Primary Orange */
+  --color-brand-orange: #f97316;
+  --color-brand-slate: #64748b;
+  --color-surface-grey: #fcfcfd;
 }
 
 :root {
   font-family: 'Noto Sans', system-ui, -apple-system, sans-serif;
-  background-color: #f8fafc;
-  color: #1e293b;
+  background-color: #fcfcfd;
+  color: #475569; /* Slate 600 - Lighter text */
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
 }
 
 body {
   margin: 0;
   overflow: hidden;
+  text-align: left;
+}
+
+/* Bento Box Grid Component - Orange Theme */
+.bento-card {
+  background: white;
+  border: 1px solid #f1f5f9;
+  border-radius: 1.25rem;
+  padding: 1.75rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);
+  transition: all 0.4s ease;
+}
+
+.bento-card:hover {
+  border-color: #f97316; /* Orange hover */
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px -5px rgba(249, 115, 22, 0.05);
+}
+
+/* Typography - Lighted/Lighter Weights */
+h1, h2, h3, h4 {
+  color: #334155; /* Slate 700 - Lighter than before */
+  letter-spacing: -0.01em;
+  font-weight: 600; /* Semi-bold instead of Black/ExtraBold */
+}
+
+p {
+  color: #64748b;
+  font-weight: 400; /* Regular weight */
 }
 
 /* Custom Scrollbar */
@@ -24,18 +58,11 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: #fed7aa; /* Light Orange/Amber scrollbar */
   border-radius: 10px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
-}
-
-/* Glassmorphism */
-.glass-panel {
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: #f97316;
 }
 
 /* Animations */
@@ -45,7 +72,7 @@ body {
 }
 
 .animate-shimmer {
-  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background: linear-gradient(90deg, #fef3c7 25%, #fde68a 50%, #fef3c7 75%);
   background-size: 200% 100%;
   animation: shimmer 2s infinite;
 }

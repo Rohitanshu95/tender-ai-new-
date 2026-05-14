@@ -78,6 +78,7 @@ const AnalysisMatrix = ({
           authority: data.organization,
           department: data.department || "Public Works",
           type: data.tender_type || selectedDocType.toUpperCase(),
+          estimated_value: data.estimated_value || "N/A",
           date_of_publish: data.date_of_publish,
           date_of_closing: data.date_of_closing
         });
@@ -120,7 +121,7 @@ const AnalysisMatrix = ({
   const handleRegenerate = async () => {
     setGenerating(prev => ({ ...prev, general: true }));
     try {
-      const response = await axios.post(`http://localhost:5001/api/tenders/${tenderId}/regenerate`);
+      const response = await axios.post(`http://localhost:5001/api/tenders/${encodeURIComponent(tenderId)}/regenerate`);
       // Update UI with new requirements
       const newReqs = response.data.requirements;
       setExtractions(prev => ({
@@ -167,6 +168,7 @@ const AnalysisMatrix = ({
         authority: general.organization,
         department: general.department || "Public Works",
         type: general.tender_type || selectedDocType.toUpperCase(),
+        estimated_value: general.estimated_value || "N/A",
         date_of_publish: general.date_of_publish,
         date_of_closing: general.date_of_closing
       });
@@ -489,6 +491,20 @@ const AnalysisMatrix = ({
                   type="text"
                   value={rawMetadata.date_of_closing}
                   onChange={(e) => updateMetadata('date_of_closing', e.target.value)}
+                  className="w-full text-lg font-black text-slate-700 outline-none bg-transparent"
+                />
+              </div>
+            </div>
+            <div className="p-8 bg-white border border-slate-200 rounded-[2.5rem] shadow-sm group hover:border-emerald-200 transition-all">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-4">Estimated Value</label>
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-slate-50 rounded-lg text-slate-400 group-hover:text-emerald-600">
+                  <BarChart4 size={16} />
+                </div>
+                <input 
+                  type="text"
+                  value={rawMetadata.estimated_value}
+                  onChange={(e) => updateMetadata('estimated_value', e.target.value)}
                   className="w-full text-lg font-black text-slate-700 outline-none bg-transparent"
                 />
               </div>

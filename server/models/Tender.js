@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 const tenderSchema = new mongoose.Schema({
     tenderId: { type: String, required: true, unique: true },
     title: { type: String, required: true },
+    estimatedValue: { type: String },
     description: { type: String },
     organization: { type: String },
     department: { type: String },
