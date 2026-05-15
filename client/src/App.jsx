@@ -11,6 +11,9 @@ import PQEvaluation from './pages/PQEvaluation';
 import TQEvaluation from './pages/TQEvaluation';
 import Proposals from './pages/Proposals';
 import UploadProposal from './pages/UploadProposal';
+import EvaluationHub from './pages/Evaluations';
+import PQReport from './pages/PQReport';
+import FinancialEvaluation from './pages/FinancialEvaluation';
 
 // Placeholder Components
 // Placeholder Components
@@ -126,6 +129,18 @@ const App = () => {
     setActiveTab('proposals');
   };
 
+  const handleEvaluate = (tender, isReevaluate) => {
+    setSelectedTender(tender);
+    // Navigate based on current stage
+    if (tender.currentStage === 'PQ' || isReevaluate) {
+      setActiveTab('pq-eval');
+    } else if (tender.currentStage === 'TQ') {
+      setActiveTab('tq-eval');
+    } else if (tender.currentStage === 'Financial') {
+      setActiveTab('financial-eval');
+    }
+  };
+
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard':
@@ -145,15 +160,15 @@ const App = () => {
       case 'generate-template':
         return <GenerateTemplate tender={selectedTender} initialCorrigenda={extraCorrigenda} onBack={() => setActiveTab('ai-configure')} onSave={() => setActiveTab('ai-configure')} />;
       case 'evaluations':
-        return <Evaluations 
-          onBack={() => setActiveTab('dashboard')} 
-          onStartPQ={() => setActiveTab('pq-eval')}
-          onStartTQ={() => setActiveTab('tq-eval')}
-        />;
+        return <EvaluationHub onEvaluate={handleEvaluate} />;
       case 'pq-eval':
-        return <PQEvaluation tenderId="T-001" onComplete={() => setActiveTab('evaluations')} />;
+        return <PQEvaluation tenderId={selectedTender?.tenderId || "1"} onComplete={() => setActiveTab('pq-report')} />;
+      case 'pq-report':
+        return <PQReport tenderId={selectedTender?.tenderId || "1"} onProceed={() => setActiveTab('tq-eval')} onBack={() => setActiveTab('evaluations')} />;
       case 'tq-eval':
-        return <TQEvaluation tenderId="T-001" onComplete={() => setActiveTab('evaluations')} />;
+        return <TQEvaluation tenderId={selectedTender?.tenderId || "1"} onComplete={() => setActiveTab('financial-eval')} />;
+      case 'financial-eval':
+        return <FinancialEvaluation tenderId={selectedTender?.tenderId || "1"} onComplete={() => setActiveTab('evaluations')} />;
       case 'proposals':
         return <Proposals onUpload={() => setActiveTab('upload-proposal')} onBack={() => setActiveTab('dashboard')} />;
       case 'upload-proposal':
