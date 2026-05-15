@@ -76,3 +76,44 @@ p {
   background-size: 200% 100%;
   animation: shimmer 2s infinite;
 }
+
+/* Print Rules for Reports */
+@media print {
+  aside, 
+  nav, 
+  header .flex.items-center.space-x-4 button:not(:last-child),
+  header .flex.items-center.space-x-4 button:last-child,
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    overflow: visible !important;
+    background: white !important;
+  }
+
+  .flex-1 {
+    overflow: visible !important;
+  }
+
+  .custom-scrollbar {
+    overflow: visible !important;
+  }
+
+  /* Reset layout for print */
+  .max-w-7xl {
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .rounded-\[2\.5rem\] {
+    border-radius: 1rem !important;
+    box-shadow: none !important;
+    border: 1px solid #e2e8f0 !important;
+  }
+
+  .shadow-sm, .shadow-lg, .shadow-xl {
+    box-shadow: none !important;
+  }
+}

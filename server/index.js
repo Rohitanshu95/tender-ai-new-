@@ -8,6 +8,7 @@ import tenderRoutes from './routes/tenders.js';
 import documentRoutes from './routes/documents.js';
 import evaluationRoutes from './routes/evaluations.js';
 import bidderRoutes from './routes/bidders.js';
+import analyticsRoutes from './routes/analytics.js';
 
 dotenv.config();
 
@@ -29,6 +30,7 @@ app.use('/api/tenders', tenderRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/evaluations', evaluationRoutes);
 app.use('/api/bidders', bidderRoutes);
+app.use('/api/analytics', analyticsRoutes);
 
 app.post('/test-direct', (req, res) => res.json({ message: 'Direct hits work!' }));
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { logActivity } from '../utils/activityLogger';
 import { 
   ChevronRight, Eye, RefreshCw, Wand2, Search, Filter, Info, ArrowLeft,
   X, Plus, Upload, CheckCircle2, AlertCircle
@@ -57,6 +58,7 @@ const AIConfigure = ({ onView, onBack, onGenerate }) => {
   };
 
   const proceedWithGeneration = () => {
+    logActivity('AI_EXTRACTION', regenTender?.tenderId, `Started AI extraction for ${regenTender?.tenderId}`);
     onGenerate(regenTender, newCorrigenda);
     setShowRegenModal(false);
   };
@@ -183,7 +185,10 @@ const AIConfigure = ({ onView, onBack, onGenerate }) => {
                           </>
                         ) : (
                           <button 
-                            onClick={() => onGenerate(tender)}
+                            onClick={() => {
+                              logActivity('AI_EXTRACTION', tender.tenderId, `Started first-time AI generation for ${tender.tenderId}`);
+                              onGenerate(tender);
+                            }}
                             className="flex items-center space-x-2 px-5 py-2.5 bg-orange-600 text-white rounded-xl text-[11px] font-semibold shadow-xl shadow-orange-100 hover:bg-orange-500 transition-all active:scale-95 uppercase tracking-widest"
                           >
                             <Wand2 size={14} />

@@ -14,24 +14,10 @@ import UploadProposal from './pages/UploadProposal';
 import EvaluationHub from './pages/Evaluations';
 import PQReport from './pages/PQReport';
 import FinancialEvaluation from './pages/FinancialEvaluation';
+import Dashboard from './pages/Dashboard';
 
 // Placeholder Components
 // Placeholder Components
-const Dashboard = ({ onBack }) => (
-  <div className="flex-1 flex flex-col bg-[#fcfcfd]">
-    <div className="p-10 max-w-[1600px] mx-auto w-full">
-      <div className="flex items-center space-x-2 text-xs font-bold text-slate-400 mb-6 uppercase tracking-wider">
-        <span className="text-slate-600">Overview</span>
-      </div>
-      <div className="mb-10">
-        <h1 className="text-4xl font-semibold text-slate-700 tracking-tight">System Dashboard</h1>
-      </div>
-      <div className="p-12 border-2 border-dashed border-slate-200 rounded-[3rem] text-center text-slate-400 font-bold">
-        Analytics and overview metrics will appear here.
-      </div>
-    </div>
-  </div>
-);
 
 const Evaluations = ({ onBack, onStartPQ, onStartTQ }) => (
   <div className="flex-1 flex flex-col bg-[#fcfcfd]">
@@ -101,6 +87,7 @@ const Reports = ({ onBack }) => (
 const App = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [selectedTender, setSelectedTender] = useState(null);
+  const [uploadTenderId, setUploadTenderId] = useState(null);
 
   const handleViewTender = (tender) => {
     setSelectedTender(tender);
@@ -126,7 +113,13 @@ const App = () => {
   };
 
   const handleUploadComplete = () => {
+    setUploadTenderId(null);
     setActiveTab('proposals');
+  };
+
+  const handleStartUpload = (tenderId) => {
+    setUploadTenderId(tenderId);
+    setActiveTab('upload-proposal');
   };
 
   const handleEvaluate = (tender, isReevaluate) => {
@@ -170,9 +163,9 @@ const App = () => {
       case 'financial-eval':
         return <FinancialEvaluation tenderId={selectedTender?.tenderId || "1"} onComplete={() => setActiveTab('evaluations')} />;
       case 'proposals':
-        return <Proposals onUpload={() => setActiveTab('upload-proposal')} onBack={() => setActiveTab('dashboard')} />;
+        return <Proposals onUpload={handleStartUpload} onBack={() => setActiveTab('dashboard')} />;
       case 'upload-proposal':
-        return <UploadProposal onBack={() => setActiveTab('proposals')} onSave={handleUploadComplete} />;
+        return <UploadProposal initialTenderId={uploadTenderId} onBack={() => setActiveTab('proposals')} onSave={handleUploadComplete} />;
       case 'reports':
         return <Reports onBack={() => setActiveTab('dashboard')} />;
       default:

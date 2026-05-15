@@ -14,7 +14,7 @@ const PQReport = ({ tenderId, onProceed, onBack }) => {
   useEffect(() => {
     const fetchEvaluation = async () => {
       try {
-        const res = await axios.get(`${API_BASE_URL}/evaluations/${tenderId}`);
+        const res = await axios.get(`${API_BASE_URL}/evaluations/${encodeURIComponent(tenderId)}`);
         setEvaluation(res.data);
       } catch (err) {
         console.error("Error fetching evaluation:", err);
@@ -44,9 +44,12 @@ const PQReport = ({ tenderId, onProceed, onBack }) => {
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-black text-slate-900 tracking-tight">PQ Evaluation Report</h2>
           <div className="flex items-center space-x-4">
-            <button className="flex items-center space-x-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-wider shadow-sm hover:bg-slate-50 transition-all">
-              <Download size={14} />
-              <span>Export PDF</span>
+            <button 
+              onClick={() => window.print()}
+              className="flex items-center space-x-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-wider shadow-sm hover:bg-slate-50 transition-all"
+            >
+              <Printer size={14} />
+              <span>Export PDF / Print</span>
             </button>
             <button 
               onClick={onProceed}

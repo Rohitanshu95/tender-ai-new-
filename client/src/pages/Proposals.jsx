@@ -60,13 +60,6 @@ const Proposals = ({ onBack, onUpload }) => {
                 <p className="text-slate-500 font-normal italic">View and manage bidder proposals</p>
               </div>
             </div>
-            <button 
-              onClick={onUpload}
-              className="bg-orange-600 hover:bg-orange-500 text-white px-6 py-3.5 rounded-xl font-semibold shadow-xl shadow-orange-100 transition-all active:scale-95 flex items-center space-x-2"
-            >
-              <Plus size={20} strokeWidth={2} />
-              <span>Upload Proposals</span>
-            </button>
           </div>
 
           {loading ? (
@@ -114,9 +107,30 @@ const Proposals = ({ onBack, onUpload }) => {
                   </div>
 
                   {expandedTender === tender._id && (
-                    <div className="px-8 pb-8 space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
-                      {tender.bidders && tender.bidders.length > 0 ? (
-                        tender.bidders.map((bidder, bIdx) => (
+                    <div className="px-8 pb-8 space-y-6 animate-in fade-in slide-in-from-top-2 duration-300">
+                      {/* Upload Option for this tender */}
+                      <div className="flex items-center justify-between p-6 bg-orange-50/30 border border-orange-100 rounded-[2rem] border-dashed">
+                        <div className="flex items-center space-x-4">
+                          <div className="h-10 w-10 bg-white rounded-xl flex items-center justify-center border border-orange-100 shadow-sm">
+                            <Plus className="text-orange-600" size={18} />
+                          </div>
+                          <div>
+                            <p className="text-xs font-black text-slate-800 uppercase tracking-tight">Add New Proposal</p>
+                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Upload documents for a new bidder</p>
+                          </div>
+                        </div>
+                        <button 
+                          onClick={() => onUpload(tender.tenderId)}
+                          className="px-6 py-2.5 bg-orange-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-orange-500 transition-all shadow-lg shadow-orange-100 active:scale-95"
+                        >
+                          Upload for this Tender
+                        </button>
+                      </div>
+
+                      <div className="space-y-4">
+                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-2">Uploaded Bidders</h4>
+                        {tender.bidders && tender.bidders.length > 0 ? (
+                          tender.bidders.map((bidder, bIdx) => (
                           <div key={bIdx} className="border border-slate-100 rounded-[2rem] overflow-hidden bg-slate-50/30">
                             <div 
                               className="p-6 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors"
@@ -192,6 +206,7 @@ const Proposals = ({ onBack, onUpload }) => {
                           <p className="text-xs font-bold text-slate-400 uppercase tracking-[0.2em]">No bidders associated with this tender.</p>
                         </div>
                       )}
+                      </div>
                     </div>
                   )}
                 </div>

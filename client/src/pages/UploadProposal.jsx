@@ -3,12 +3,13 @@ import axios from 'axios';
 import { 
   ChevronRight, ArrowLeft, Upload, FileText, X, CheckCircle2, Loader2, Plus
 } from 'lucide-react';
+import { logActivity } from '../utils/activityLogger';
 
 const API_BASE_URL = 'http://localhost:5001/api';
 
-const UploadProposal = ({ onBack, onSave }) => {
+const UploadProposal = ({ onBack, onSave, initialTenderId }) => {
   const [tenders, setTenders] = useState([]);
-  const [selectedTender, setSelectedTender] = useState('');
+  const [selectedTender, setSelectedTender] = useState(initialTenderId || '');
   const [bidderName, setBidderName] = useState('');
   const [proposalType, setProposalType] = useState('Technical');
   const [files, setFiles] = useState([]);
@@ -57,6 +58,7 @@ const UploadProposal = ({ onBack, onSave }) => {
       await axios.post(`${API_BASE_URL}/bidders/upload-proposal`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
+      logActivity('UPLOAD', selectedTender, `New proposal upload for Tender ${selectedTender} by ${bidderName}`, { bidderName, filesCount: files.length });
       onSave(); // Redirect back to Proposals list
     } catch (err) {
       console.error("Upload failed", err);
@@ -106,7 +108,7 @@ const UploadProposal = ({ onBack, onSave }) => {
                       value={selectedTender}
                       onChange={(e) => setSelectedTender(e.target.value)}
                       className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-orange-500 transition-all appearance-none"
-                      disabled={loadingTenders}
+                      disabled={loadingTenders || !!initialTenderId}
                     >
                       <option value="">Select a tender...</option>
                       {tenders.map(t => (

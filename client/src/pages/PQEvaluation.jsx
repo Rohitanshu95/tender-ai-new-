@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   ChevronRight, CheckCircle2, XCircle, ShieldCheck, 
-  FileText, ArrowRight, Save, User, Loader2
+  FileText, ArrowRight, Save, User, Loader2, Eye
 } from 'lucide-react';
 import axios from 'axios';
 
@@ -15,15 +15,16 @@ const PQEvaluation = ({ tenderId, onComplete }) => {
   useEffect(() => {
     const fetchEvaluation = async () => {
       try {
-        const res = await axios.get(`${API_BASE_URL}/evaluations/${tenderId}`);
+        const res = await axios.get(`${API_BASE_URL}/evaluations/${encodeURIComponent(tenderId)}`);
         setEvaluation(res.data);
         
         // If results are empty, fetch bidders and initialize
         if (!res.data.pqResults?.bidders || res.data.pqResults.bidders.length === 0) {
-          const biddersRes = await axios.get(`${API_BASE_URL}/bidders/tender/${tenderId}`);
+          const biddersRes = await axios.get(`${API_BASE_URL}/bidders/tender/${encodeURIComponent(tenderId)}`);
           const initialBidders = biddersRes.data.map(b => ({
             bidderId: b._id,
             name: b.name,
+            documents: b.documents || [],
             criteriaStatus: { registration: false, financial: false, experience: false, compliance: false },
             aiRecommendation: 'Pending',
             confidence: 0,
@@ -53,11 +54,18 @@ const PQEvaluation = ({ tenderId, onComplete }) => {
       // Call microservice for AI verification
       const res = await axios.post(`http://localhost:8000/verify-pq`, { tenderId });
       
+      // Merge results to preserve local data like 'documents'
+      const aiBidders = res.data.bidders;
+      const mergedBidders = aiBidders.map(aiB => {
+        const existing = evaluation.pqResults.bidders.find(b => b.name === aiB.name);
+        return { ...aiB, documents: existing?.documents || [], bidderId: existing?.bidderId || aiB.bidderId };
+      });
+
       // Update evaluation with AI results
       const updatedEval = await axios.post(`${API_BASE_URL}/evaluations/update`, {
         tenderId,
         stage: 'PQ',
-        results: { bidders: res.data.bidders },
+        results: { bidders: mergedBidders },
         status: 'In Progress'
       });
       setEvaluation(updatedEval.data);
@@ -175,6 +183,21 @@ const PQEvaluation = ({ tenderId, onComplete }) => {
                           </div>
                           <span className="text-xs font-bold text-slate-700">{bidder.name}</span>
                         </div>
+                        {bidder.documents && bidder.documents.length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {bidder.documents.map((doc, dIdx) => (
+                              <button 
+                                key={dIdx}
+                                onClick={() => window.open(`http://localhost:5001/${doc.filePath}`, '_blank')}
+                                className="flex items-center space-x-1 px-2 py-1 bg-slate-100 border border-slate-200 rounded-lg text-[8px] font-black uppercase text-slate-500 hover:bg-orange-50 hover:border-orange-200 hover:text-orange-600 transition-all group"
+                                title={`View ${doc.name}`}
+                              >
+                                <Eye size={10} className="group-hover:scale-110 transition-transform" />
+                                <span className="truncate max-w-[80px]">{doc.name}</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
                       </td>
                       <td className="px-6 py-6 text-center">
                         {bidder.criteriaStatus?.registration ? <CheckCircle2 className="w-5 h-5 text-emerald-500 mx-auto" /> : <XCircle className="w-5 h-5 text-rose-500 mx-auto" />}

@@ -3,7 +3,7 @@ import axios from 'axios';
 import { 
   ChevronRight, Star, Plus, Minus, ShieldCheck, 
   ArrowRight, Save, User, BarChart4, Loader2, Trash2,
-  Trophy, Medal, Target
+  Trophy, Medal, Target, Printer
 } from 'lucide-react';
 
 const API_BASE_URL = 'http://localhost:5001/api';
@@ -17,7 +17,7 @@ const TQEvaluation = ({ tenderId, onComplete }) => {
   useEffect(() => {
     const fetchEvaluation = async () => {
       try {
-        const res = await axios.get(`${API_BASE_URL}/evaluations/${tenderId}`);
+        const res = await axios.get(`${API_BASE_URL}/evaluations/${encodeURIComponent(tenderId)}`);
         setEvaluation(res.data);
         
         const existingCriteria = res.data.tqResults?.criteria || ["Technical Methodology", "Project Timeline", "Quality Assurance"];
@@ -140,6 +140,13 @@ const TQEvaluation = ({ tenderId, onComplete }) => {
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-black text-slate-900 tracking-tight">Technical Qualification (TQ) Evaluation</h2>
           <div className="flex items-center space-x-3">
+            <button 
+              onClick={() => window.print()}
+              className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-wider shadow-sm hover:bg-slate-50 transition-all flex items-center space-x-2 no-print"
+            >
+              <Printer size={14} />
+              <span>Export Report</span>
+            </button>
             <input 
               type="text" 
               placeholder="Add New Criteria..."

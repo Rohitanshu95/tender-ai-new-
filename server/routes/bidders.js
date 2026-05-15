@@ -105,4 +105,24 @@ router.post('/upload-proposal', upload.array('files', 10), async (req, res) => {
     }
 });
 
+// Get bidders for a specific tender
+router.get('/tender/:tenderId', async (req, res) => {
+    try {
+        const { tenderId } = req.params;
+        const bidders = await Bidder.find({ tenderId });
+        
+        const biddersWithDocs = await Promise.all(bidders.map(async (bidder) => {
+            const documents = await BidderDocument.find({ 
+                tenderId,
+                bidderName: bidder.name 
+            });
+            return { ...bidder.toObject(), documents };
+        }));
+
+        res.json(biddersWithDocs);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
 export default router;

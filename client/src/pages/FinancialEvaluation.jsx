@@ -3,7 +3,7 @@ import axios from 'axios';
 import { 
   ChevronRight, DollarSign, TrendingDown, AlertTriangle, CheckCircle2, 
   ArrowRight, Save, User, BarChart4, Loader2, Info, TrendingUp,
-  Scale, ShieldAlert, BadgeCheck
+  Scale, ShieldAlert, BadgeCheck, Printer
 } from 'lucide-react';
 
 const API_BASE_URL = 'http://localhost:5001/api';
@@ -18,7 +18,7 @@ const FinancialEvaluation = ({ tenderId, onComplete }) => {
   useEffect(() => {
     const fetchEvaluation = async () => {
       try {
-        const res = await axios.get(`${API_BASE_URL}/evaluations/${tenderId}`);
+        const res = await axios.get(`${API_BASE_URL}/evaluations/${encodeURIComponent(tenderId)}`);
         setEvaluation(res.data);
         setMethod(res.data.financialResults?.method || 'L1');
 
@@ -127,19 +127,28 @@ const FinancialEvaluation = ({ tenderId, onComplete }) => {
         </div>
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-black text-slate-900 tracking-tight">Financial Evaluation</h2>
-          <div className="flex items-center bg-slate-100 p-1 rounded-xl shadow-inner border border-slate-200">
+          <div className="flex items-center space-x-3 no-print">
             <button 
-              onClick={() => setMethod('L1')}
-              className={`px-6 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${method === 'L1' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-400'}`}
+              onClick={() => window.print()}
+              className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-wider shadow-sm hover:bg-slate-50 transition-all flex items-center space-x-2"
             >
-              L1 Selection
+              <Printer size={14} />
+              <span>Export Report</span>
             </button>
-            <button 
-              onClick={() => setMethod('QCBS')}
-              className={`px-6 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${method === 'QCBS' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-400'}`}
-            >
-              QCBS Method
-            </button>
+            <div className="flex items-center bg-slate-100 p-1 rounded-xl shadow-inner border border-slate-200">
+              <button 
+                onClick={() => setMethod('L1')}
+                className={`px-6 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${method === 'L1' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-400'}`}
+              >
+                L1 Selection
+              </button>
+              <button 
+                onClick={() => setMethod('QCBS')}
+                className={`px-6 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${method === 'QCBS' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-400'}`}
+              >
+                QCBS Method
+              </button>
+            </div>
           </div>
         </div>
         <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">Tender ID: {tenderId}</p>
