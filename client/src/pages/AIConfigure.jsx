@@ -156,13 +156,16 @@ const AIConfigure = ({ onView, onBack, onGenerate }) => {
                       <span className="text-sm font-bold text-slate-600 group-hover:text-slate-900 transition-colors">{tender.title}</span>
                     </td>
                     <td className="px-8 py-6 text-center">
-                      <span className={`px-4 py-1.5 rounded-full text-[10px] font-semibold uppercase tracking-tight border ${
-                        tender.hasTemplate 
-                          ? 'bg-orange-50 text-orange-600 border-orange-100' 
-                          : 'bg-slate-50 text-slate-400 border-slate-100'
-                      }`}>
-                        {tender.hasTemplate ? 'Template Active' : 'Pending Config'}
-                      </span>
+                      <div className="flex justify-center">
+                        <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-sm transition-all flex items-center space-x-2 ${
+                          tender.hasTemplate 
+                            ? 'bg-emerald-50 text-emerald-600 border-emerald-100' 
+                            : 'bg-amber-50 text-amber-600 border-amber-100'
+                        }`}>
+                          <div className={`w-1.5 h-1.5 rounded-full ${tender.hasTemplate ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+                          <span>{tender.hasTemplate ? 'Template Active' : 'Pending Config'}</span>
+                        </span>
+                      </div>
                     </td>
                     <td className="px-8 py-6 text-right">
                       <div className="flex items-center justify-end space-x-3">

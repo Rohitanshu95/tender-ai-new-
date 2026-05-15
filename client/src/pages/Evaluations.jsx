@@ -2,12 +2,12 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { 
   ChevronRight, ArrowRight, RefreshCw, CheckCircle2, AlertCircle, Clock, 
-  BarChart3, ShieldCheck, DollarSign, Search
+  BarChart3, ShieldCheck, DollarSign, Search, ArrowLeft
 } from 'lucide-react';
 
 const API_BASE_URL = 'http://localhost:5001/api';
 
-const Evaluations = ({ onEvaluate }) => {
+const Evaluations = ({ onEvaluate, onBack }) => {
   const [tenders, setTenders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -60,9 +60,17 @@ const Evaluations = ({ onEvaluate }) => {
 
           {/* Header Section */}
           <div className="flex items-center justify-between mb-10">
-            <div>
-              <h1 className="text-4xl font-semibold text-slate-700 tracking-tight mb-2">Evaluations</h1>
-              <p className="text-slate-500 font-normal italic">Track and manage tender evaluation progress</p>
+            <div className="flex items-center space-x-6">
+              <button 
+                onClick={onBack}
+                className="p-3 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-slate-900 hover:border-slate-400 transition-all shadow-sm active:scale-95"
+              >
+                <ArrowLeft size={20} />
+              </button>
+              <div>
+                <h1 className="text-4xl font-semibold text-slate-700 tracking-tight mb-2">Evaluations</h1>
+                <p className="text-slate-500 font-medium italic">Track and manage tender evaluation progress</p>
+              </div>
             </div>
             <div className="flex items-center space-x-4">
               <div className="relative">
@@ -108,19 +116,53 @@ const Evaluations = ({ onEvaluate }) => {
                     <div className="flex items-center space-x-8">
                       {/* Progress Steps */}
                       <div className="flex items-center space-x-4 px-8 border-x border-slate-100">
-                        <div className={`flex flex-col items-center space-y-2 ${tender.currentStage === 'PQ' || tender.status === 'Yet to Complete' ? 'opacity-100' : 'opacity-40'}`}>
-                          <ShieldCheck size={20} className={tender.currentStage !== 'PQ' && tender.status !== 'Yet to Complete' ? 'text-emerald-500' : 'text-slate-400'} />
-                          <span className="text-[9px] font-black uppercase tracking-tighter">PQ</span>
+                        {/* PQ Step */}
+                        <div className="flex flex-col items-center space-y-2">
+                          <ShieldCheck 
+                            size={20} 
+                            className={
+                              tender.status === 'Completed' || (tender.currentStage !== 'PQ' && tender.status !== 'Yet to Complete')
+                                ? 'text-emerald-500 opacity-100' 
+                                : tender.currentStage === 'PQ' && tender.status === 'In Progress'
+                                  ? 'text-orange-500 opacity-100'
+                                  : 'text-slate-300 opacity-40'
+                            } 
+                          />
+                          <span className={`text-[9px] font-black uppercase tracking-tighter ${tender.currentStage === 'PQ' ? 'text-slate-900' : 'text-slate-400'}`}>PQ</span>
                         </div>
+                        
                         <div className="w-8 h-[1px] bg-slate-100" />
-                        <div className={`flex flex-col items-center space-y-2 ${tender.currentStage === 'TQ' ? 'opacity-100' : 'opacity-40'}`}>
-                          <RefreshCw size={20} className={tender.currentStage === 'TQ' ? 'text-amber-500' : 'text-slate-400'} />
-                          <span className="text-[9px] font-black uppercase tracking-tighter">TQ</span>
+                        
+                        {/* TQ Step */}
+                        <div className="flex flex-col items-center space-y-2">
+                          <RefreshCw 
+                            size={20} 
+                            className={
+                              tender.status === 'Completed' || (tender.currentStage === 'Financial' || tender.currentStage === 'Completed')
+                                ? 'text-emerald-500 opacity-100' 
+                                : tender.currentStage === 'TQ'
+                                  ? 'text-orange-500 opacity-100 animate-spin-slow'
+                                  : 'text-slate-300 opacity-40'
+                            } 
+                          />
+                          <span className={`text-[9px] font-black uppercase tracking-tighter ${tender.currentStage === 'TQ' ? 'text-slate-900' : 'text-slate-400'}`}>TQ</span>
                         </div>
+                        
                         <div className="w-8 h-[1px] bg-slate-100" />
-                        <div className={`flex flex-col items-center space-y-2 ${tender.currentStage === 'Financial' ? 'opacity-100' : 'opacity-40'}`}>
-                          <DollarSign size={20} className={tender.currentStage === 'Financial' ? 'text-blue-500' : 'text-slate-400'} />
-                          <span className="text-[9px] font-black uppercase tracking-tighter">FIN</span>
+                        
+                        {/* FIN Step */}
+                        <div className="flex flex-col items-center space-y-2">
+                          <DollarSign 
+                            size={20} 
+                            className={
+                              tender.status === 'Completed'
+                                ? 'text-emerald-500 opacity-100' 
+                                : tender.currentStage === 'Financial'
+                                  ? 'text-orange-500 opacity-100'
+                                  : 'text-slate-300 opacity-40'
+                            } 
+                          />
+                          <span className={`text-[9px] font-black uppercase tracking-tighter ${tender.currentStage === 'Financial' ? 'text-slate-900' : 'text-slate-400'}`}>FIN</span>
                         </div>
                       </div>
 

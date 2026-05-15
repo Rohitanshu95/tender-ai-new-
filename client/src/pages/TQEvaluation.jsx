@@ -2,16 +2,17 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { 
   ChevronRight, Star, Plus, Minus, ShieldCheck, 
-  ArrowRight, Save, User, BarChart4, Loader2, Trash2,
+  ArrowRight, ArrowLeft, Save, User, BarChart4, Loader2, Trash2,
   Trophy, Medal, Target, Printer
 } from 'lucide-react';
 
 const API_BASE_URL = 'http://localhost:5001/api';
 
-const TQEvaluation = ({ tenderId, onComplete }) => {
+const TQEvaluation = ({ tenderId, onComplete, onBack }) => {
   const [evaluation, setEvaluation] = useState(null);
   const [loading, setLoading] = useState(true);
   const [criteria, setCriteria] = useState([]);
+  const [weights, setWeights] = useState({});
   const [newCriteriaName, setNewCriteriaName] = useState("");
 
   useEffect(() => {
@@ -20,11 +21,27 @@ const TQEvaluation = ({ tenderId, onComplete }) => {
         const res = await axios.get(`${API_BASE_URL}/evaluations/${encodeURIComponent(tenderId)}`);
         setEvaluation(res.data);
         
-        const existingCriteria = res.data.tqResults?.criteria || ["Technical Methodology", "Project Timeline", "Quality Assurance"];
+        const defaultCriteria = ["Technical Methodology", "Project Timeline", "Quality Assurance", "Resource Allocation", "Safety Measures"];
+        const existingCriteria = (res.data.tqResults?.criteria && res.data.tqResults.criteria.length > 0) 
+          ? res.data.tqResults.criteria 
+          : defaultCriteria;
+        
         setCriteria(existingCriteria);
 
+        // Initialize weights if not present or if using defaults
+        const defaultWeights = existingCriteria.reduce((acc, curr, idx) => ({ 
+          ...acc, 
+          [curr]: idx === 0 ? 30 : idx === 1 ? 20 : 15 
+        }), {});
+
+        const initialWeights = (res.data.tqResults?.weights && Object.keys(res.data.tqResults.weights).length > 0)
+          ? res.data.tqResults.weights
+          : defaultWeights;
+          
+        setWeights(initialWeights);
+
         if (!res.data.tqResults?.bidders || res.data.tqResults.bidders.length === 0) {
-          const qualifiedBidders = res.data.pqResults.bidders
+          const qualifiedBidders = (res.data.pqResults?.bidders || [])
             .filter(b => b.decision === 'accept')
             .map(b => ({
               bidderId: b.bidderId,
@@ -34,13 +51,9 @@ const TQEvaluation = ({ tenderId, onComplete }) => {
               rank: 0
             }));
           
-          const updatedEval = await axios.post(`${API_BASE_URL}/evaluations/update`, {
-            tenderId,
-            stage: 'TQ',
-            results: { criteria: existingCriteria, bidders: qualifiedBidders },
-            status: 'In Progress'
-          });
-          setEvaluation(updatedEval.data);
+          if (qualifiedBidders.length > 0) {
+            await updateBackend(existingCriteria, qualifiedBidders, initialWeights);
+          }
         }
       } catch (err) {
         console.error("Error fetching TQ evaluation:", err);
@@ -54,7 +67,9 @@ const TQEvaluation = ({ tenderId, onComplete }) => {
   const addCriteria = () => {
     if (!newCriteriaName) return;
     const updatedCriteria = [...criteria, newCriteriaName];
+    const updatedWeights = { ...weights, [newCriteriaName]: 0 };
     setCriteria(updatedCriteria);
+    setWeights(updatedWeights);
     setNewCriteriaName("");
     
     const updatedBidders = evaluation.tqResults.bidders.map(b => ({
@@ -62,12 +77,15 @@ const TQEvaluation = ({ tenderId, onComplete }) => {
       scores: { ...b.scores, [newCriteriaName]: 0 }
     }));
     
-    updateBackend(updatedCriteria, updatedBidders);
+    updateBackend(updatedCriteria, updatedBidders, updatedWeights);
   };
 
   const removeCriteria = (name) => {
     const updatedCriteria = criteria.filter(c => c !== name);
+    const updatedWeights = { ...weights };
+    delete updatedWeights[name];
     setCriteria(updatedCriteria);
+    setWeights(updatedWeights);
     
     const updatedBidders = evaluation.tqResults.bidders.map(b => {
       const newScores = { ...b.scores };
@@ -75,7 +93,17 @@ const TQEvaluation = ({ tenderId, onComplete }) => {
       return { ...b, scores: newScores };
     });
     
-    updateBackend(updatedCriteria, updatedBidders);
+    updateBackend(updatedCriteria, updatedBidders, updatedWeights);
+  };
+
+  const calculateWeightedScore = (scores, currentWeights) => {
+    let total = 0;
+    Object.keys(scores).forEach(crit => {
+      const score = scores[crit] || 0;
+      const weight = currentWeights[crit] || 0;
+      total += (score * weight) / 100;
+    });
+    return total.toFixed(1);
   };
 
   const handleScoreChange = (bidderId, critName, val) => {
@@ -83,8 +111,7 @@ const TQEvaluation = ({ tenderId, onComplete }) => {
     const updatedBidders = evaluation.tqResults.bidders.map(b => {
       if (b.bidderId === bidderId) {
         const newScores = { ...b.scores, [critName]: score };
-        const total = Object.values(newScores).reduce((a, b) => a + b, 0);
-        const weighted = (total / (Object.keys(newScores).length || 1)).toFixed(1);
+        const weighted = calculateWeightedScore(newScores, weights);
         return { ...b, scores: newScores, weightedScore: weighted };
       }
       return b;
@@ -93,12 +120,25 @@ const TQEvaluation = ({ tenderId, onComplete }) => {
     setEvaluation({ ...evaluation, tqResults: { ...evaluation.tqResults, bidders: updatedBidders } });
   };
 
-  const updateBackend = async (updatedCriteria, updatedBidders) => {
+  const handleWeightChange = (critName, val) => {
+    const weight = parseInt(val) || 0;
+    const newWeights = { ...weights, [critName]: weight };
+    setWeights(newWeights);
+    
+    const updatedBidders = evaluation.tqResults.bidders.map(b => ({
+      ...b,
+      weightedScore: calculateWeightedScore(b.scores, newWeights)
+    }));
+    
+    setEvaluation({ ...evaluation, tqResults: { ...evaluation.tqResults, bidders: updatedBidders, weights: newWeights } });
+  };
+
+  const updateBackend = async (updatedCriteria, updatedBidders, updatedWeights) => {
     try {
       const res = await axios.post(`${API_BASE_URL}/evaluations/update`, {
         tenderId,
         stage: 'TQ',
-        results: { criteria: updatedCriteria, bidders: updatedBidders }
+        results: { criteria: updatedCriteria, bidders: updatedBidders, weights: updatedWeights || weights }
       });
       setEvaluation(res.data);
     } catch (err) {
@@ -129,201 +169,201 @@ const TQEvaluation = ({ tenderId, onComplete }) => {
   const bidders = evaluation?.tqResults?.bidders || [];
   const sortedBidders = [...bidders].sort((a, b) => b.weightedScore - a.weightedScore);
 
+  // Mock AI scores for the indicators in the UI (these could be real in a full AI flow)
+  const mockAIScores = {
+    "Technical Methodology": 85,
+    "Project Timeline": 90,
+    "Quality Assurance": 88,
+    "Resource Allocation": 82,
+    "Safety Measures": 95
+  };
+
   return (
     <div className="flex-1 flex flex-col bg-[#fcfcfd] overflow-hidden">
-      <header className="h-24 bg-white border-b border-slate-200 flex flex-col justify-center px-10 shrink-0">
-        <div className="flex items-center space-x-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">
-          <span>Dashboard</span>
+      {/* Breadcrumbs & Header */}
+      <header className="h-28 bg-white border-b border-slate-200 flex flex-col justify-center px-12 shrink-0 no-print">
+        <div className="flex items-center space-x-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">
+          <button onClick={onBack} className="hover:text-slate-900 transition-colors">Dashboard</button>
           <ChevronRight size={10} />
-          <span className="text-slate-600">Evaluate TQ</span>
+          <span className="text-slate-600 font-bold">Evaluate TQ</span>
         </div>
         <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-black text-slate-900 tracking-tight">Technical Qualification (TQ) Evaluation</h2>
+          <div className="flex items-center space-x-4">
+            <button 
+              onClick={onBack}
+              className="p-2.5 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-slate-900 transition-all shadow-sm active:scale-95"
+            >
+              <ArrowLeft size={18} />
+            </button>
+            <h2 className="text-3xl font-black text-slate-900 tracking-tight">Technical Qualification (TQ) Evaluation</h2>
+          </div>
           <div className="flex items-center space-x-3">
-            <button 
-              onClick={() => window.print()}
-              className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-wider shadow-sm hover:bg-slate-50 transition-all flex items-center space-x-2 no-print"
-            >
-              <Printer size={14} />
-              <span>Export Report</span>
-            </button>
-            <input 
-              type="text" 
-              placeholder="Add New Criteria..."
-              className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:ring-2 focus:ring-orange-500 outline-none w-[200px]"
-              value={newCriteriaName}
-              onChange={(e) => setNewCriteriaName(e.target.value)}
-            />
-            <button 
-              onClick={addCriteria}
-              className="p-2 bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition-all active:scale-95 shadow-lg shadow-slate-200"
-            >
-              <Plus size={18} />
-            </button>
+             <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl px-3 py-1 shadow-sm mr-2">
+                <input 
+                    type="text" 
+                    placeholder="Add New Criteria..."
+                    className="bg-transparent text-xs font-bold outline-none w-[180px] py-1 text-slate-700"
+                    value={newCriteriaName}
+                    onChange={(e) => setNewCriteriaName(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && addCriteria()}
+                />
+                <button 
+                    onClick={addCriteria}
+                    className="ml-2 p-1.5 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-all active:scale-95"
+                >
+                    <Plus size={14} />
+                </button>
+            </div>
+            <div className="px-3 py-1.5 bg-purple-50 border border-purple-100 rounded-xl flex items-center space-x-2">
+              <ShieldCheck size={14} className="text-purple-600" />
+              <span className="text-[10px] font-black text-purple-700 uppercase tracking-widest">AI-Assisted Scoring</span>
+            </div>
           </div>
         </div>
-        <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">Tender ID: {tenderId}</p>
+        <p className="text-[11px] font-bold text-slate-400 mt-2 uppercase tracking-widest">Tender ID: {tenderId}</p>
       </header>
 
-      <div className="flex-1 overflow-y-auto p-10 custom-scrollbar">
-        <div className="max-w-7xl mx-auto w-full space-y-8">
+      <div className="flex-1 overflow-y-auto p-12 custom-scrollbar bg-[#f8fafc]">
+        <div className="max-w-[1600px] mx-auto w-full space-y-8">
+          
+          {/* AI Banner */}
+          <div className="bg-purple-50/40 border border-purple-100 rounded-[2.5rem] p-10 flex items-start space-x-8">
+            <div className="p-4 bg-white rounded-2xl shadow-sm border border-purple-100 flex items-center justify-center">
+              <ShieldCheck className="w-8 h-8 text-purple-600" />
+            </div>
+            <div>
+              <h4 className="text-sm font-black text-purple-950 mb-1 uppercase tracking-tight">AI Scoring Complete</h4>
+              <p className="text-[13px] text-purple-800 font-medium leading-relaxed opacity-80">
+                AI has evaluated technical proposals against TQ criteria. Review and adjust scores if needed.
+              </p>
+            </div>
+          </div>
+
           {/* Scoring Matrix */}
-          <div className="bg-white border border-slate-200 rounded-[2.5rem] shadow-sm overflow-hidden">
-            <div className="p-8 border-b border-slate-100 flex items-center justify-between">
-              <h3 className="text-sm font-black text-slate-900 uppercase tracking-tight">TQ Scoring Matrix</h3>
-              <div className="flex items-center space-x-2 px-4 py-2 bg-slate-50 rounded-xl border border-slate-100">
-                <Target size={14} className="text-slate-400" />
-                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Manual Input Mode</span>
-              </div>
+          <div className="bg-white border border-slate-200 rounded-[3rem] shadow-sm overflow-hidden">
+            <div className="p-10 border-b border-slate-100">
+              <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">TQ Scoring Matrix</h3>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-left">
+              <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50/50">
-                    <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-wider min-w-[200px]">Bidder Name</th>
-                    {criteria.map(c => (
-                      <th key={c} className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-wider text-center group relative min-w-[150px]">
-                        <div className="flex items-center justify-center space-x-2">
-                          <span className="truncate max-w-[120px]">{c}</span>
-                          <button onClick={() => removeCriteria(c)} className="opacity-0 group-hover:opacity-100 transition-opacity text-rose-500 hover:scale-110">
-                            <Minus size={12} />
-                          </button>
+                    <th className="px-12 py-8 text-[11px] font-black text-slate-900 uppercase tracking-widest min-w-[300px]">Bidder</th>
+                    {criteria.map((c, idx) => (
+                      <th key={c} className="px-6 py-8 text-[11px] font-black text-slate-900 uppercase tracking-widest text-center border-l border-slate-100">
+                        <div className="flex flex-col items-center">
+                          <div className="flex items-center space-x-2 mb-1">
+                            <span className="truncate max-w-[140px]">{c}</span>
+                            <button onClick={() => removeCriteria(c)} className="opacity-0 hover:opacity-100 text-rose-500 transition-all">
+                                <Minus size={12} />
+                            </button>
+                          </div>
+                          <div className="flex items-center space-x-1 opacity-40">
+                             <input 
+                                type="number" 
+                                className="w-8 bg-transparent text-center text-[10px] font-black outline-none"
+                                value={weights[c] || 0}
+                                onChange={(e) => handleWeightChange(c, e.target.value)}
+                            />
+                            <span className="text-[9px] font-black tracking-widest uppercase">({weights[c]}% weight)</span>
+                          </div>
                         </div>
                       </th>
                     ))}
-                    <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-wider text-right">Avg Score</th>
+                    <th className="px-12 py-8 text-[11px] font-black text-slate-900 uppercase tracking-widest text-center border-l border-slate-100">Weighted Score</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-50">
-                  {bidders.map((bidder) => (
+                <tbody className="divide-y divide-slate-100">
+                  {bidders.length > 0 ? bidders.map((bidder) => (
                     <tr key={bidder.bidderId} className="hover:bg-slate-50/30 transition-colors">
-                      <td className="px-8 py-6">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-8 h-8 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center text-[10px] font-black">
+                      <td className="px-12 py-10">
+                        <div className="flex items-center space-x-5">
+                          <div className="w-12 h-12 rounded-2xl bg-orange-50 text-orange-600 flex items-center justify-center text-xs font-black shadow-sm border border-orange-100">
                             {bidder.name.charAt(0)}
                           </div>
-                          <span className="text-xs font-bold text-slate-700">{bidder.name}</span>
+                          <span className="text-sm font-black text-slate-800">{bidder.name}</span>
                         </div>
                       </td>
                       {criteria.map(c => (
-                        <td key={c} className="px-6 py-6 text-center">
-                          <input 
-                            type="number"
-                            max="100"
-                            min="0"
-                            className="w-16 p-2 bg-slate-50 border border-slate-100 rounded-lg text-center text-xs font-black outline-none focus:ring-2 focus:ring-orange-500 transition-all"
-                            value={bidder.scores[c] || 0}
-                            onChange={(e) => handleScoreChange(bidder.bidderId, c, e.target.value)}
-                          />
+                        <td key={c} className="px-6 py-10 text-center border-l border-slate-50">
+                          <div className="flex flex-col items-center space-y-4">
+                            <input 
+                                type="number"
+                                max="100"
+                                min="0"
+                                className="w-20 p-3 bg-slate-50 border border-slate-200 rounded-2xl text-center text-sm font-black text-slate-800 outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-orange-300 transition-all shadow-sm"
+                                value={bidder.scores[c] || 0}
+                                onChange={(e) => handleScoreChange(bidder.bidderId, c, e.target.value)}
+                            />
+                            <div className="px-3 py-1 bg-purple-50 text-purple-600 rounded-lg text-[10px] font-black border border-purple-100 flex items-center">
+                                <span>AI: {mockAIScores[c] || 80}</span>
+                            </div>
+                          </div>
                         </td>
                       ))}
-                      <td className="px-8 py-6 text-right">
-                        <div className="flex flex-col items-end">
-                          <span className="text-lg font-black text-orange-600 leading-none">{bidder.weightedScore}</span>
-                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">/ 100</span>
+                      <td className="px-12 py-10 text-center border-l border-slate-50">
+                        <div className="flex flex-col items-center">
+                          <span className="text-3xl font-black text-orange-600 tracking-tighter">{bidder.weightedScore}</span>
+                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-1">/ 100</span>
                         </div>
                       </td>
                     </tr>
-                  ))}
+                  )) : (
+                    <tr>
+                      <td colSpan={criteria.length + 2} className="px-10 py-32 text-center bg-slate-50/50">
+                        <div className="flex flex-col items-center justify-center space-y-6">
+                            <div className="p-6 bg-white rounded-[2rem] shadow-xl shadow-slate-200/50 border border-slate-100">
+                                <User className="w-10 h-10 text-slate-300" />
+                            </div>
+                            <div>
+                                <p className="text-base font-black text-slate-900 uppercase tracking-widest">Awaiting Qualified Bidders</p>
+                                <p className="text-xs text-slate-400 font-bold mt-2 uppercase tracking-widest opacity-60">Qualified bidders from PQ stage will appear here</p>
+                            </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
           </div>
 
           {/* Ranking Visual Board */}
-          <div className="bg-slate-900 rounded-[3rem] p-12 shadow-2xl relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-orange-500/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl" />
-            <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-500/10 rounded-full translate-y-1/2 -translate-x-1/2 blur-3xl" />
-            
-            <div className="relative z-10">
-              <div className="flex items-center justify-between mb-12">
-                <div className="flex items-center space-x-4">
-                  <div className="h-12 w-12 bg-white/10 rounded-2xl flex items-center justify-center">
-                    <BarChart4 className="text-orange-500" size={24} />
+          <div className="bg-[#eff6ff]/50 border border-blue-100 rounded-[3rem] p-12 shadow-sm">
+            <div className="flex items-center space-x-4 mb-10">
+              <BarChart4 className="text-blue-600" size={24} />
+              <h3 className="text-sm font-black text-blue-900 uppercase tracking-widest">Technical Ranking</h3>
+            </div>
+            <div className="space-y-6">
+              {sortedBidders.map((bidder, idx) => (
+                <div key={bidder.bidderId} className="flex items-center justify-between">
+                  <div className="flex items-center space-x-8">
+                    <div className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-sm border ${idx === 0 ? 'bg-orange-500 text-white border-orange-400' : 'bg-orange-100 text-orange-600 border-orange-200'}`}>
+                        Rank {idx + 1}
+                    </div>
+                    <span className="text-base font-black text-slate-800 tracking-tight">{bidder.name}</span>
                   </div>
-                  <div>
-                    <h3 className="text-xl font-black text-white uppercase tracking-tight">Technical Ranking Board</h3>
-                    <p className="text-white/40 text-xs font-medium">Auto-updated based on criteria scoring</p>
+                  <div className="flex items-center space-x-3">
+                    <span className="text-sm font-black text-slate-600 tracking-widest uppercase">{bidder.weightedScore} points</span>
                   </div>
                 </div>
-                <div className="flex items-center space-x-2 px-4 py-2 bg-white/5 rounded-xl border border-white/10">
-                  <Trophy size={14} className="text-yellow-500" />
-                  <span className="text-[10px] font-black text-white/60 uppercase tracking-widest">Top Performer Identified</span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 gap-4">
-                {sortedBidders.map((bidder, idx) => (
-                  <div 
-                    key={bidder.bidderId} 
-                    className={`flex items-center justify-between p-6 rounded-3xl border transition-all duration-500 group ${idx === 0 ? 'bg-white/10 border-white/20 scale-[1.02] shadow-xl' : 'bg-white/5 border-white/5 hover:bg-white/10'}`}
-                  >
-                    <div className="flex items-center space-x-8">
-                      <div className="flex items-center space-y-1 flex-col w-12 shrink-0">
-                        <span className={`text-[10px] font-black uppercase tracking-widest ${idx === 0 ? 'text-yellow-500' : 'text-white/20'}`}>Rank</span>
-                        <span className={`text-2xl font-black ${idx === 0 ? 'text-white' : 'text-white/40'}`}>{idx + 1}</span>
-                      </div>
-                      
-                      <div className="flex items-center space-x-4">
-                        <div className={`h-12 w-12 rounded-2xl flex items-center justify-center text-sm font-black ${idx === 0 ? 'bg-orange-500 text-white' : 'bg-white/10 text-white/60'}`}>
-                          {bidder.name.charAt(0)}
-                        </div>
-                        <div>
-                          <h4 className="text-base font-bold text-white group-hover:text-orange-400 transition-colors">{bidder.name}</h4>
-                          <div className="flex items-center space-x-2 mt-1">
-                            {idx === 0 && <Medal size={12} className="text-yellow-500" />}
-                            <span className={`text-[10px] font-black uppercase tracking-widest ${idx === 0 ? 'text-orange-500' : 'text-white/40'}`}>
-                              {idx === 0 ? 'Best Proposal' : 'Competitive'}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center space-x-12">
-                      {/* Mini Bar Graph */}
-                      <div className="hidden md:flex items-end space-x-1.5 h-12 w-[120px]">
-                        {criteria.map((c, cIdx) => (
-                          <div 
-                            key={cIdx} 
-                            className={`w-3 rounded-full transition-all duration-1000 delay-${cIdx * 100}`}
-                            style={{ 
-                              height: `${Math.max(10, bidder.scores[c] || 10)}%`,
-                              backgroundColor: idx === 0 ? '#f97316' : '#ffffff20'
-                            }}
-                          />
-                        ))}
-                      </div>
-                      
-                      <div className="text-right">
-                        <div className="flex items-baseline justify-end space-x-1">
-                          <span className={`text-3xl font-black tracking-tighter ${idx === 0 ? 'text-white' : 'text-white/80'}`}>{bidder.weightedScore}</span>
-                          <span className="text-[10px] font-black text-white/30 uppercase tracking-widest leading-none">pts</span>
-                        </div>
-                        <p className="text-[8px] font-black text-white/20 uppercase tracking-[0.2em] mt-1">Weighted Total</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              ))}
             </div>
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center justify-end space-x-4 pb-10">
+          <div className="flex items-center justify-end space-x-6 pb-24 no-print">
             <button 
               onClick={() => updateBackend(criteria, bidders)}
-              className="px-8 py-4 bg-white border border-slate-200 rounded-2xl text-xs font-black text-slate-600 hover:bg-slate-50 transition-all uppercase tracking-widest shadow-sm flex items-center space-x-2 active:scale-95"
+              className="px-12 py-5 bg-white border border-slate-200 rounded-[1.5rem] text-[11px] font-black text-slate-600 hover:bg-slate-50 transition-all uppercase tracking-[0.2em] shadow-sm active:scale-95 border-b-4 border-b-slate-100"
             >
-              <Save size={16} />
-              <span>Save Progress</span>
+              Save as Draft
             </button>
             <button 
               onClick={handleComplete}
-              className="px-8 py-4 bg-orange-600 text-white rounded-2xl text-xs font-black hover:bg-orange-500 transition-all uppercase tracking-widest shadow-lg shadow-orange-600/20 active:scale-95 flex items-center space-x-3"
+              className="px-12 py-5 bg-[#f24c00] text-white rounded-[1.5rem] text-[11px] font-black hover:bg-[#d94400] transition-all uppercase tracking-[0.2em] shadow-2xl shadow-orange-200 active:scale-95 border-b-4 border-b-[#bf3c00]"
             >
-              <span>Complete TQ Evaluation</span>
-              <ArrowRight size={16} />
+              Complete TQ Evaluation
             </button>
           </div>
         </div>

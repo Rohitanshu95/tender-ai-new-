@@ -153,15 +153,15 @@ const App = () => {
       case 'generate-template':
         return <GenerateTemplate tender={selectedTender} initialCorrigenda={extraCorrigenda} onBack={() => setActiveTab('ai-configure')} onSave={() => setActiveTab('ai-configure')} />;
       case 'evaluations':
-        return <EvaluationHub onEvaluate={handleEvaluate} />;
+        return <EvaluationHub onEvaluate={handleEvaluate} onBack={() => setActiveTab('dashboard')} />;
       case 'pq-eval':
-        return <PQEvaluation tenderId={selectedTender?.tenderId || "1"} onComplete={() => setActiveTab('pq-report')} />;
+        return <PQEvaluation tenderId={selectedTender?.tenderId || "1"} onComplete={() => setActiveTab('pq-report')} onBack={() => setActiveTab('evaluations')} />;
       case 'pq-report':
         return <PQReport tenderId={selectedTender?.tenderId || "1"} onProceed={() => setActiveTab('tq-eval')} onBack={() => setActiveTab('evaluations')} />;
       case 'tq-eval':
-        return <TQEvaluation tenderId={selectedTender?.tenderId || "1"} onComplete={() => setActiveTab('financial-eval')} />;
+        return <TQEvaluation tenderId={selectedTender?.tenderId || "1"} onComplete={() => setActiveTab('financial-eval')} onBack={() => setActiveTab('evaluations')} />;
       case 'financial-eval':
-        return <FinancialEvaluation tenderId={selectedTender?.tenderId || "1"} onComplete={() => setActiveTab('evaluations')} />;
+        return <FinancialEvaluation tenderId={selectedTender?.tenderId || "1"} onComplete={() => setActiveTab('evaluations')} onBack={() => setActiveTab('evaluations')} />;
       case 'proposals':
         return <Proposals onUpload={handleStartUpload} onBack={() => setActiveTab('dashboard')} />;
       case 'upload-proposal':

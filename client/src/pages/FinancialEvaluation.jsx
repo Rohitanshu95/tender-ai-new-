@@ -2,13 +2,13 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { 
   ChevronRight, DollarSign, TrendingDown, AlertTriangle, CheckCircle2, 
-  ArrowRight, Save, User, BarChart4, Loader2, Info, TrendingUp,
+  ArrowRight, ArrowLeft, Save, User, BarChart4, Loader2, Info, TrendingUp,
   Scale, ShieldAlert, BadgeCheck, Printer
 } from 'lucide-react';
 
 const API_BASE_URL = 'http://localhost:5001/api';
 
-const FinancialEvaluation = ({ tenderId, onComplete }) => {
+const FinancialEvaluation = ({ tenderId, onComplete, onBack }) => {
   const [evaluation, setEvaluation] = useState(null);
   const [loading, setLoading] = useState(true);
   const [method, setMethod] = useState('L1'); // L1 or QCBS
@@ -119,14 +119,22 @@ const FinancialEvaluation = ({ tenderId, onComplete }) => {
 
   return (
     <div className="flex-1 flex flex-col bg-[#fcfcfd] overflow-hidden">
-      <header className="h-24 bg-white border-b border-slate-200 flex flex-col justify-center px-10 shrink-0">
-        <div className="flex items-center space-x-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">
-          <span>Dashboard</span>
+      <header className="h-28 bg-white border-b border-slate-200 flex flex-col justify-center px-12 shrink-0 no-print">
+        <div className="flex items-center space-x-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">
+          <button onClick={onBack} className="hover:text-slate-900 transition-colors">Dashboard</button>
           <ChevronRight size={10} />
-          <span className="text-slate-600">Evaluate Financials</span>
+          <span className="text-slate-600 font-bold">Evaluate Financials</span>
         </div>
         <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-black text-slate-900 tracking-tight">Financial Evaluation</h2>
+          <div className="flex items-center space-x-4">
+            <button 
+              onClick={onBack}
+              className="p-2.5 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-slate-900 transition-all shadow-sm active:scale-95"
+            >
+              <ArrowLeft size={18} />
+            </button>
+            <h2 className="text-3xl font-black text-slate-900 tracking-tight">Financial Evaluation</h2>
+          </div>
           <div className="flex items-center space-x-3 no-print">
             <button 
               onClick={() => window.print()}
@@ -151,7 +159,7 @@ const FinancialEvaluation = ({ tenderId, onComplete }) => {
             </div>
           </div>
         </div>
-        <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">Tender ID: {tenderId}</p>
+        <p className="text-[11px] font-bold text-slate-400 mt-2 uppercase tracking-widest">Tender ID: {tenderId}</p>
       </header>
 
       <div className="flex-1 overflow-y-auto p-10 custom-scrollbar">

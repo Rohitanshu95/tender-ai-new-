@@ -20,8 +20,8 @@ const GenerateTemplate = ({ tender, initialCorrigenda = [], onBack, onSave }) =>
         publishedDate: meta.date_of_publish || tender?.publishedDate,
         closingDate: meta.date_of_closing || tender?.closingDate,
         requirements: [
-          ...(extractions.pq || []).map(r => ({ ...r, category: 'PQ', key: r.requirement, value: r.description })),
-          ...(extractions.tq || []).map(r => ({ ...r, category: 'TQ', key: r.requirement, value: r.description }))
+          ...(extractions.pq || []).map(r => ({ ...r, category: 'PQ', key: r.key, value: r.value })),
+          ...(extractions.tq || []).map(r => ({ ...r, category: 'TQ', key: r.key, value: r.value }))
         ]
       };
 

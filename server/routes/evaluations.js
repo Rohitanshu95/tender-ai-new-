@@ -31,9 +31,53 @@ router.get('/:tenderId', async (req, res) => {
   try {
     let evaluation = await Evaluation.findOne({ tenderId: req.params.tenderId });
     if (!evaluation) {
-      evaluation = new Evaluation({ tenderId: req.params.tenderId });
+      evaluation = new Evaluation({ tenderId: req.params.tenderId, pqResults: { bidders: [] } });
+    }
+
+    // Sync bidders from Bidder collection
+    const allBidders = await Bidder.find({ tenderId: req.params.tenderId });
+    const BidderDocument = (await import('../models/BidderDocument.js')).default;
+    
+    const existingBidders = evaluation.pqResults.bidders || [];
+    const existingBidderIds = existingBidders.map(b => b.bidderId?.toString());
+
+    let hasChanges = false;
+    
+    // Process all bidders to ensure they exist in evaluation and have latest docs
+    const updatedBidders = await Promise.all(allBidders.map(async (bidder) => {
+      const documents = await BidderDocument.find({ 
+        tenderId: req.params.tenderId,
+        bidderName: bidder.name 
+      });
+
+      const existingIndex = existingBidderIds.indexOf(bidder._id.toString());
+      
+      if (existingIndex === -1) {
+        hasChanges = true;
+        return {
+          bidderId: bidder._id,
+          name: bidder.name,
+          decision: 'pending',
+          criteriaStatus: { registration: false, financial: false, experience: false, compliance: false },
+          documents: documents
+        };
+      } else {
+        // Update documents for existing bidders too
+        const existing = existingBidders[existingIndex];
+        // Only mark as changed if doc count changed (simple check)
+        if ((existing.documents?.length || 0) !== documents.length) {
+          hasChanges = true;
+          return { ...existing.toObject(), documents };
+        }
+        return existing;
+      }
+    }));
+
+    if (hasChanges || evaluation.isNew) {
+      evaluation.pqResults.bidders = updatedBidders;
       await evaluation.save();
     }
+
     res.json(evaluation);
   } catch (err) {
     res.status(500).json({ message: err.message });

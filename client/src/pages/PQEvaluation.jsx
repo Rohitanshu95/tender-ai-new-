@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { 
   ChevronRight, CheckCircle2, XCircle, ShieldCheck, 
-  FileText, ArrowRight, Save, User, Loader2, Eye
+  FileText, ArrowRight, ArrowLeft, Save, User, Loader2, Eye
 } from 'lucide-react';
 import axios from 'axios';
 
 const API_BASE_URL = 'http://localhost:5001/api';
 
-const PQEvaluation = ({ tenderId, onComplete }) => {
+const PQEvaluation = ({ tenderId, onComplete, onBack }) => {
   const [evaluation, setEvaluation] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isVerifying, setIsVerifying] = useState(false);
@@ -122,12 +122,20 @@ const PQEvaluation = ({ tenderId, onComplete }) => {
     <div className="flex-1 flex flex-col bg-[#fcfcfd] overflow-hidden">
       <header className="h-24 bg-white border-b border-slate-200 flex flex-col justify-center px-10 shrink-0">
         <div className="flex items-center space-x-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">
-          <span>Dashboard</span>
+          <button onClick={onBack} className="hover:text-slate-900 transition-colors">Dashboard</button>
           <ChevronRight size={10} />
           <span className="text-slate-600">Evaluate PQ</span>
         </div>
         <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-black text-slate-900 tracking-tight">Pre-Qualification (PQ) Evaluation</h2>
+          <div className="flex items-center space-x-4">
+            <button 
+              onClick={onBack}
+              className="p-2.5 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-slate-900 transition-all shadow-sm active:scale-95"
+            >
+              <ArrowLeft size={18} />
+            </button>
+            <h2 className="text-2xl font-black text-slate-900 tracking-tight">Pre-Qualification (PQ) Evaluation</h2>
+          </div>
           <button 
             onClick={handleVerify}
             disabled={isVerifying}
